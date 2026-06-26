@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import type { ChatMessage, ToolCall, ProviderConfig, AIProviderType } from '../types';
+import type { ChatMessage, ToolCall, ProviderConfig, AIProviderType, SystemInfo, AgentMode } from '../types';
 import { AI_TOOLS, buildSystemPrompt, streamChatCompletion } from '../utils/ai-client';
 import { getDefaultProviderConfig, AI_PROVIDERS } from '../types';
 import { logger } from '../utils/logger';
@@ -16,6 +16,18 @@ interface UseAIReturn {
   activeProvider: AIProviderType;
   providerLabel: string;
   setActiveProvider: (type: AIProviderType) => Promise<void>;
+  /** Tool calls awaiting user approval (agentMode === 'interactive') */
+  pendingToolCalls: ToolCall[] | null;
+  /** Current agent mode */
+  agentMode: AgentMode;
+  /** Approve pending tool calls and execute them */
+  approvePending: () => void;
+  /** Approve pending calls and auto-approve rest of session */
+  approveAlwaysPending: () => void;
+  /** Skip pending tool calls */
+  skipPending: () => void;
+  /** Set agent mode */
+  setAgentMode: (mode: AgentMode) => void;
 }
 
 const MAX_TOOL_CYCLES = 5;
@@ -89,7 +101,29 @@ export function useAI(): UseAIReturn {
   const abortControllerRef = useRef<AbortController | null>(null);
   const processingRef = useRef(false);
   const messagesRef = useRef<ChatMessage[]>([]);
+  const systemInfoRef = useRef<SystemInfo | null>(null);
+  const [pendingToolCalls, setPendingToolCalls] = useState<ToolCall[] | null>(null);
+  const [agentMode, setAgentModeState] = useState<AgentMode>('auto');
+  const agentModeRef = useRef<AgentMode>('auto');
+  const pendingResolverRef = useRef<((decision: 'approve' | 'always' | 'skip') => void) | null>(null);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
+
+  const setAgentMode = useCallback((mode: AgentMode) => {
+    agentModeRef.current = mode;
+    setAgentModeState(mode);
+  }, []);
+
+  const approvePending = useCallback(() => {
+    pendingResolverRef.current?.('approve');
+  }, []);
+
+  const approveAlwaysPending = useCallback(() => {
+    pendingResolverRef.current?.('always');
+  }, []);
+
+  const skipPending = useCallback(() => {
+    pendingResolverRef.current?.('skip');
+  }, []);
 
   const stopGeneration = useCallback(() => {
     if (abortControllerRef.current) {
@@ -137,6 +171,14 @@ export function useAI(): UseAIReturn {
         logger.info('INIT', `Provider loaded: ${active}`, { baseUrl: config.baseUrl, model: config.model, apiKey: maskedKey, hasKey: !!config.apiKey });
         setHasApiKey(!!config.apiKey);
       } catch (err) { logger.warn('INIT', 'Failed to load provider config, using defaults', err); }
+
+      try {
+        const info = await window.systemAPI.getInfo();
+        systemInfoRef.current = info;
+        logger.info('INIT', 'System info collected', { os: info.os, arch: info.architecture, user: info.username });
+      } catch (err) {
+        logger.warn('INIT', 'Failed to collect system info', err);
+      }
     })();
   }, []);
 
@@ -174,7 +216,7 @@ export function useAI(): UseAIReturn {
     const provider = providerConfigRef.current;
     const controller = new AbortController();
     abortControllerRef.current = controller;
-    const systemPrompt = buildSystemPrompt(providerInfo?.label || provider.type);
+    const systemPrompt = buildSystemPrompt(providerInfo?.label || provider.type, systemInfoRef.current || undefined);
 
     let assistantContent = '';
     let assistantReasoning = '';
@@ -242,6 +284,49 @@ export function useAI(): UseAIReturn {
         if (validToolCalls.length === 0) {
           logger.info('CYCLE', '✓ No tool calls — final response ready');
           break;
+        }
+
+        // ── Interactive mode: pause for user approval ──
+        if (agentModeRef.current === 'interactive') {
+          setPendingToolCalls(validToolCalls);
+          const decision = await new Promise<'approve' | 'always' | 'skip'>(resolve => {
+            pendingResolverRef.current = resolve;
+          });
+          setPendingToolCalls(null);
+          pendingResolverRef.current = null;
+
+          if (decision === 'skip') {
+            const skipResults = validToolCalls.map(tc => ({
+              toolCallId: tc.id,
+              name: tc.function.name,
+              displayContent: '```\n(Skipped — user chose not to run this)\n```',
+              hadError: false,
+            }));
+            setMessages((prev) => {
+              const toolResultMsgs = skipResults.map(tr => ({
+                id: `tool-${tr.toolCallId}`,
+                role: 'tool' as const,
+                content: tr.displayContent,
+                timestamp: Date.now(),
+                toolCallId: tr.toolCallId,
+                toolName: tr.name,
+                toolStatus: 'completed' as const,
+              }));
+              const updated = [...prev, ...toolResultMsgs];
+              messagesRef.current = updated;
+              return updated;
+            });
+            currentMsgs = [...messagesRef.current];
+            cycles++;
+            continue;
+          }
+
+          if (decision === 'always') {
+            // Auto-approve all remaining calls this session
+            agentModeRef.current = 'auto';
+            setAgentModeState('auto');
+          }
+          // 'approve' or 'always' → fall through to execute tools
         }
 
         // ── Execute ALL tools in parallel ──
@@ -313,5 +398,6 @@ export function useAI(): UseAIReturn {
     loadMessages: (msgs: ChatMessage[]) => { setMessages(msgs); messagesRef.current = msgs; },
     hasApiKey, checkApiKey, activeProvider,
     providerLabel: providerInfo?.label || 'AI', setActiveProvider,
+    pendingToolCalls, agentMode, approvePending, approveAlwaysPending, skipPending, setAgentMode,
   };
 }

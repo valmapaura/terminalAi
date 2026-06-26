@@ -2215,3 +2215,219 @@ html, body, #root {
 .hidden {
   display: none !important;
 }
+
+/* ============================================================
+   Agent Mode Bar — shown above input area
+   ============================================================ */
+.agent-mode-bar {
+  display: flex;
+  align-items: center;
+  padding: 4px 12px;
+  gap: 6px;
+}
+
+.agent-mode-badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  user-select: none;
+}
+
+.agent-mode-auto {
+  background: rgba(13, 188, 121, 0.12);
+  color: var(--accent-green);
+  border: 1px solid rgba(13, 188, 121, 0.2);
+}
+
+.agent-mode-interactive {
+  background: rgba(215, 186, 125, 0.12);
+  color: var(--text-warning);
+  border: 1px solid rgba(215, 186, 125, 0.25);
+}
+
+/* ============================================================
+   Tool Confirmation Card — VS Code Copilot confirmation style
+   ============================================================ */
+.tool-confirmation-card {
+  margin: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+  overflow: hidden;
+  animation: slideUp 0.15s ease-out;
+}
+
+.tool-confirmation-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tool-confirmation-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.tool-confirmation-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.tool-confirmation-commands {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tool-confirmation-command {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tool-confirmation-label {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--accent-blue);
+  font-family: var(--font-mono);
+}
+
+.tool-confirmation-detail {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.4;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+.tool-confirmation-buttons {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.btn-confirm-allow {
+  background: var(--accent-blue);
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: all 0.1s;
+  flex: 1;
+}
+
+.btn-confirm-allow:hover {
+  background: var(--accent-blue-hover);
+}
+
+.btn-confirm-always {
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  transition: all 0.1s;
+  flex-shrink: 0;
+}
+
+.btn-confirm-always:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+.btn-confirm-skip {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  transition: all 0.1s;
+  flex-shrink: 0;
+}
+
+.btn-confirm-skip:hover {
+  color: var(--text-error);
+  border-color: var(--border-color);
+  background: rgba(196, 43, 43, 0.06);
+}
+
+/* ============================================================
+   Agent Mode Settings — radio card style
+   ============================================================ */
+.agent-mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.agent-mode-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.1s;
+  background: var(--bg-primary);
+}
+
+.agent-mode-option:hover {
+  border-color: var(--text-muted);
+  background: var(--bg-hover);
+}
+
+.agent-mode-option.selected {
+  border-color: var(--accent-blue);
+  background: color-mix(in srgb, var(--accent-blue) 8%, var(--bg-primary));
+}
+
+.agent-mode-option input[type="radio"] {
+  margin-top: 3px;
+  accent-color: var(--accent-blue);
+  flex-shrink: 0;
+}
+
+.agent-mode-option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.agent-mode-option-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.agent-mode-option-desc {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}

@@ -23,6 +23,12 @@ export const App: React.FC = () => {
     stopGeneration,
     clearMessages,
     loadMessages,
+    pendingToolCalls,
+    agentMode,
+    approvePending,
+    approveAlwaysPending,
+    skipPending,
+    setAgentMode,
   } = useAI();
   const [settings, setSettings] = useState<AppSettings>({
     theme: 'dark',
@@ -31,6 +37,7 @@ export const App: React.FC = () => {
     activeProvider: 'deepseek',
     providers: {},
     showTerminal: true,
+    agentMode: 'auto',
   });
   const [showSettings, setShowSettings] = useState(false);
   const [previewCommand, setPreviewCommand] = useState<{ command: string; validation: ValidationResult } | null>(null);
@@ -216,6 +223,11 @@ export const App: React.FC = () => {
                   onClearMessages={clearMessages}
                   onLoadMessages={loadMessages}
                   providerLabel={providerLabel}
+                  pendingToolCalls={pendingToolCalls}
+                  agentMode={agentMode}
+                  onApprove={approvePending}
+                  onApproveAlways={approveAlwaysPending}
+                  onSkip={skipPending}
                 />
               }
             />
@@ -232,6 +244,11 @@ export const App: React.FC = () => {
               onClearMessages={clearMessages}
               onLoadMessages={loadMessages}
               providerLabel={providerLabel}
+              pendingToolCalls={pendingToolCalls}
+              agentMode={agentMode}
+              onApprove={approvePending}
+              onApproveAlways={approveAlwaysPending}
+              onSkip={skipPending}
             />
           )}
         </div>
@@ -269,6 +286,7 @@ export const App: React.FC = () => {
           onUpdate={updateSettings}
           onClose={() => setShowSettings(false)}
           onClearChat={clearMessages}
+          onAgentModeChange={setAgentMode}
         />
       )}
     </div>

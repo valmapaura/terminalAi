@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import type { ChatMessage, ChatSession } from '../types';
+import type { ChatMessage, ChatSession, ToolCall, AgentMode } from '../types';
 import { TinySpinner } from './TinySpinner';
 
 interface ChatPaneProps {
@@ -14,6 +14,12 @@ interface ChatPaneProps {
   onClearMessages: () => void;
   onLoadMessages: (msgs: ChatMessage[]) => void;
   providerLabel: string;
+  /** Tool calls awaiting user approval */
+  pendingToolCalls: ToolCall[] | null;
+  agentMode: AgentMode;
+  onApprove: () => void;
+  onApproveAlways: () => void;
+  onSkip: () => void;
 }
 
 /** Generate a deterministic session ID from the first user message */
@@ -21,7 +27,7 @@ function makeSessionId(): string {
   return `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, isStreaming, onOpenSettings, onClear, onStop, messages: apiMessages, onSendMessage: sendMessage, onClearMessages: clearMessages, onLoadMessages: loadMessages, providerLabel }) => {
+export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, isStreaming, onOpenSettings, onClear, onStop, messages: apiMessages, onSendMessage: sendMessage, onClearMessages: clearMessages, onLoadMessages: loadMessages, providerLabel, pendingToolCalls, agentMode, onApprove, onApproveAlways, onSkip }) => {
   const [input, setInput] = useState('');
   const [injectedCode, setInjectedCode] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -391,6 +397,54 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
     return parts;
   };
 
+  // ─── Tool Confirmation Card — like VS Code Copilot's ChatTerminalToolConfirmationSubPart ───
+  const ToolConfirmationCard: React.FC = () => {
+    if (!pendingToolCalls || pendingToolCalls.length === 0) return null;
+    return (
+      <div className="tool-confirmation-card">
+        <div className="tool-confirmation-header">
+          <span className="tool-confirmation-icon">🔧</span>
+          <span className="tool-confirmation-title">
+            {pendingToolCalls.length === 1
+              ? 'Tool execution requires approval'
+              : `${pendingToolCalls.length} tools require approval`}
+          </span>
+        </div>
+        <div className="tool-confirmation-commands">
+          {pendingToolCalls.map((tc, i) => {
+            let label = tc.function.name;
+            let detail = '';
+            try {
+              const args = JSON.parse(tc.function.arguments);
+              if (tc.function.name === 'execute_command') detail = args.command || '';
+              else if (tc.function.name === 'read_file') detail = args.path || '';
+              else if (tc.function.name === 'list_directory') detail = args.path || '';
+              else if (tc.function.name === 'inject_terminal') detail = args.command || '';
+              else detail = '';
+            } catch { detail = tc.function.arguments; }
+            return (
+              <div key={tc.id} className="tool-confirmation-command">
+                <code className="tool-confirmation-label">{getToolLabel(tc.function.name)}</code>
+                {detail && <pre className="tool-confirmation-detail">{detail}</pre>}
+              </div>
+            );
+          })}
+        </div>
+        <div className="tool-confirmation-buttons">
+          <button className="btn-confirm-allow" onClick={onApprove}>
+            Allow {pendingToolCalls.length > 1 ? `All (${pendingToolCalls.length})` : ''}
+          </button>
+          <button className="btn-confirm-always" onClick={onApproveAlways} title="Auto-approve remaining tools this session">
+            Always Allow
+          </button>
+          <button className="btn-confirm-skip" onClick={onSkip}>
+            Skip
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   // ─── Tool name display — like VS Code Copilot's invocationMessage / pastTenseMessage ───
   const getToolLabel = (name: string): string => {
     switch (name) {
@@ -648,6 +702,16 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
           )}
         </div>
       </div>
+
+      {/* ─── Agent Mode Indicator ─── */}
+      <div className="agent-mode-bar">
+        <span className={`agent-mode-badge agent-mode-${agentMode}`}>
+          {agentMode === 'interactive' ? '🔍 Interactive' : '🤖 Auto'}
+        </span>
+      </div>
+
+      {/* ─── Tool Confirmation Card ─── */}
+      <ToolConfirmationCard />
 
       {/* ─── Input Area ─── */}
       <div className="chat-input-area">

@@ -8,9 +8,10 @@ interface SettingsPanelProps {
   onUpdate: (settings: Partial<AppSettings>) => void;
   onClose: () => void;
   onClearChat?: () => void;
+  onAgentModeChange?: (mode: 'auto' | 'interactive') => void;
 }
 
-export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate, onClose, onClearChat }) => {
+export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate, onClose, onClearChat, onAgentModeChange }) => {
   const [activeProvider, setActiveProvider] = useState<AIProviderType>(settings.activeProvider || 'deepseek');
   const [providerConfigs, setProviderConfigs] = useState<Record<string, ProviderConfig>>({});
   const [localKey, setLocalKey] = useState('');
@@ -18,7 +19,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
   const [localModel, setLocalModel] = useState('');
   const [localLabel, setLocalLabel] = useState('');
   const [isCustomModel, setIsCustomModel] = useState(false);
-  const [activeTab, setActiveTab] = useState<'api' | 'appearance' | 'debug'>('api');
+  const [activeTab, setActiveTab] = useState<'api' | 'appearance' | 'debug' | 'agent'>('api');
   const [saved, setSaved] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<'idle' | 'success' | 'fail'>('idle');
@@ -250,6 +251,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
             onClick={() => setActiveTab('debug')}
           >
             🐛 Debug
+          </button>
+          <button
+            className={`settings-tab ${activeTab === 'agent' ? 'active' : ''}`}
+            onClick={() => setActiveTab('agent')}
+          >
+            🛡️ Agent
           </button>
         </div>
 
@@ -669,6 +676,64 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
   apiKey: localKey ? localKey.slice(0, 8) + '...' + localKey.slice(-4) : '(empty)',
   hasKey: !!localKey,
 }, null, 2)}</pre>
+              </div>
+            </>
+          )}
+          {activeTab === 'agent' && (
+            <>
+              <div className="settings-section">
+                <h3>🤖 Agent Mode</h3>
+                <p className="settings-hint">
+                  Control how the AI assistant executes terminal commands. In <strong>Auto</strong> mode,
+                  tools run without confirmation. In <strong>Interactive</strong> mode, the assistant asks
+                  for your approval before each tool execution.
+                </p>
+                <div className="agent-mode-options">
+                  <label className={`agent-mode-option${settings.agentMode === 'auto' ? ' selected' : ''}`}>
+                    <input
+                      type="radio"
+                      name="agentMode"
+                      value="auto"
+                      checked={settings.agentMode === 'auto'}
+                      onChange={() => {
+                        onUpdate({ agentMode: 'auto' });
+                        onAgentModeChange?.('auto');
+                      }}
+                    />
+                    <div className="agent-mode-option-content">
+                      <span className="agent-mode-option-title">🤖 Auto</span>
+                      <span className="agent-mode-option-desc">Execute commands automatically — no confirmation needed</span>
+                    </div>
+                  </label>
+                  <label className={`agent-mode-option${settings.agentMode === 'interactive' ? ' selected' : ''}`}>
+                    <input
+                      type="radio"
+                      name="agentMode"
+                      value="interactive"
+                      checked={settings.agentMode === 'interactive'}
+                      onChange={() => {
+                        onUpdate({ agentMode: 'interactive' });
+                        onAgentModeChange?.('interactive');
+                      }}
+                    />
+                    <div className="agent-mode-option-content">
+                      <span className="agent-mode-option-title">🔍 Interactive</span>
+                      <span className="agent-mode-option-desc">Ask for approval before running each tool</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div className="settings-section">
+                <h3>🔒 Safety Notes</h3>
+                <div className="settings-hint">
+                  <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 2 }}>
+                    <li><strong>Auto mode</strong> is convenient but allows the AI to run commands directly.</li>
+                    <li><strong>Interactive mode</strong> gives you a chance to review each command before execution.</li>
+                    <li>Use <strong>Always Allow</strong> to temporarily trust commands during a session.</li>
+                    <li>Switch modes anytime from this panel or the <strong>status bar</strong> indicator.</li>
+                  </ul>
+                </div>
               </div>
             </>
           )}

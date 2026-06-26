@@ -62,6 +62,7 @@ export function useTerminal() {
         activeProvider: 'deepseek',
         providers: {},
         showTerminal: true,
+        agentMode: 'auto',
       };
     } catch {
       return null;

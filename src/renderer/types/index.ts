@@ -157,6 +157,21 @@ export function getDefaultProviderConfig(type: AIProviderType): ProviderConfig {
   };
 }
 
+export interface SystemInfo {
+  os: string;
+  architecture: string;
+  shell: string;
+  powershellVersion: string;
+  username: string;
+  hostname: string;
+  cpu: string;
+  totalRamGB: number;
+  cpuCores: number;
+}
+
+/** Agent mode: auto = execute immediately, interactive = ask before each tool call */
+export type AgentMode = 'auto' | 'interactive';
+
 export interface AppSettings {
   activeProvider: AIProviderType;
   providers: Record<string, ProviderConfig>;
@@ -165,6 +180,8 @@ export interface AppSettings {
   splitDirection: 'horizontal' | 'vertical';
   /** Whether the terminal pane is visible */
   showTerminal: boolean;
+  /** Agent mode: auto-execute or ask before each tool call */
+  agentMode: AgentMode;
 }
 
 export type ActivityBarView = 'terminal' | 'chat' | 'settings' | 'extensions';

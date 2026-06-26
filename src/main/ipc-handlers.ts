@@ -1,6 +1,8 @@
 import { ipcMain, BrowserWindow, app, safeStorage } from 'electron';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
+import { execSync } from 'child_process';
 import { TerminalManager } from './terminal';
 
 function getConfigPath(): string {
@@ -240,6 +242,42 @@ export function registerIpcHandlers(terminalManager: TerminalManager): void {
   // AI tool execution — run a command silently and return output
   ipcMain.handle('ai:execute-command', (_, { command }: { command: string }) => {
     return terminalManager.executeCommand(command);
+  });
+
+  // ─── System Info — collected once at startup ───
+  ipcMain.handle('system:get-info', () => {
+    const release = os.release();
+    const parts = release.split('.');
+    const majorVersion = parseInt(parts[0] || '0', 10);
+    const buildNumber = parseInt(parts[2] || '0', 10);
+
+    let osName = 'Windows';
+    if (majorVersion === 10 && buildNumber >= 22000) osName = 'Windows 11';
+    else if (majorVersion === 10) osName = 'Windows 10';
+    else if (majorVersion === 6 && parts[1] === '3') osName = 'Windows 8.1';
+    else if (majorVersion === 6 && parts[1] === '2') osName = 'Windows 8';
+    else if (majorVersion === 6 && parts[1] === '1') osName = 'Windows 7';
+
+    let psVersion = 'unknown';
+    try {
+      psVersion = execSync('powershell -NoProfile -Command "$PSVersionTable.PSVersion.ToString()"', { timeout: 5000, encoding: 'utf-8' }).trim();
+    } catch { /* PowerShell not available */ }
+
+    const cpus = os.cpus();
+    const cpuModel = cpus.length > 0 ? cpus[0].model.trim() : 'unknown';
+    const totalRamGB = Math.round(os.totalmem() / (1024 * 1024 * 1024));
+
+    return {
+      os: `${osName} (Build ${release})`,
+      architecture: os.arch(),
+      shell: 'CMD.exe',
+      powershellVersion: psVersion,
+      username: os.userInfo().username,
+      hostname: os.hostname(),
+      cpu: cpuModel,
+      totalRamGB,
+      cpuCores: cpus.length,
+    };
   });
 
   // App utilities
