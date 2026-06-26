@@ -6,19 +6,19 @@ import { execSync } from 'child_process';
 import { TerminalManager } from './terminal';
 
 function getConfigPath(): string {
-  return path.join(app.getPath('userData'), 'terminal-ai-config.json');
+  return path.join(app.getPath('userData'), 'os-assistant-config.json');
 }
 
 function getMemoryPath(): string {
-  return path.join(app.getPath('userData'), 'terminal-ai-memory.json');
+  return path.join(app.getPath('userData'), 'os-assistant-memory.json');
 }
 
 function getModelsPath(): string {
-  return path.join(app.getPath('userData'), 'terminal-ai-models.json');
+  return path.join(app.getPath('userData'), 'os-assistant-models.json');
 }
 
 function getChatsDir(): string {
-  const dir = path.join(app.getPath('userData'), 'terminal-ai-chats');
+  const dir = path.join(app.getPath('userData'), 'os-assistant-chats');
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   return dir;
 }

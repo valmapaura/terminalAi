@@ -5,7 +5,7 @@ import { launchApp, sendMessage, setApiKey, waitForAssistantSuccess } from './he
 // Override via TEST_DEEPSEEK_API_KEY environment variable if desired.
 const DEEPSEEK_API_KEY = process.env.TEST_DEEPSEEK_API_KEY || 'sk-15983c3134e24d2fbe5a10a1d0ac630f';
 
-test.describe('Terminal AI — AI interaction', () => {
+test.describe('OS Assistant — AI interaction', () => {
   test('executes a command when asked explicitly', async () => {
     test.setTimeout(120_000);
 

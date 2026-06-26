@@ -1,4 +1,4 @@
-# Terminal AI — Architecture
+# OS Assistant — Architecture
 
 > **An open-source, split-screen terminal + AI assistant for Windows.**  
 > Think of it as a local-first AI copilot for the command line — you type plain English, the AI runs the commands.
@@ -26,7 +26,7 @@
 
 ## Overview
 
-Terminal AI is an Electron desktop app that combines a **full Windows CMD terminal** (`node-pty` + `xterm.js`) with an **AI chat interface** that can execute commands on the user's behalf. The AI uses tool calling to run commands, inspect files, read terminal output, and remember facts — all through a secure, encrypted configuration system.
+OS Assistant is an Electron desktop app that combines a **full Windows CMD terminal** (`node-pty` + `xterm.js`) with an **AI chat interface** that can execute commands on the user's behalf. The AI uses tool calling to run commands, inspect files, read terminal output, and remember facts — all through a secure, encrypted configuration system.
 
 **Key design principles:**
 
@@ -163,7 +163,7 @@ User types message ────────────────────�
 ## Directory Structure
 
 ```
-terminal-ai/
+os-assistant/
 ├── src/
 │   ├── main/                    # Electron main process
 │   │   ├── main.ts              # Entry: window creation, DevTools global shortcuts
@@ -258,7 +258,7 @@ terminal-ai/
 
 **Encryption**: API keys are encrypted via Electron's `safeStorage` (Windows Credential Manager). Falls back to base64 if unavailable.
 
-**Chat sessions** are stored as individual JSON files in `{userData}/terminal-ai-chats/` and loaded on demand.
+**Chat sessions** are stored as individual JSON files in `{userData}/os-assistant-chats/` and loaded on demand.
 
 ### 2. Preload Bridge (`src/preload/preload.ts`)
 
@@ -439,7 +439,7 @@ npm run dist               # NSIS installer (electron-builder)
 
 ### Package output
 
-- Installer: `release/Terminal AI Setup x.x.x.exe` (NSIS, per-user, optional desktop shortcut).
+- Installer: `release/OS Assistant Setup x.x.x.exe` (NSIS, per-user, optional desktop shortcut).
 - Build resources: `assets/icon.png` for installer icon.
 
 ---

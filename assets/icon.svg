@@ -8,5 +8,5 @@
   <circle cx="170" cy="120" r="4" fill="#0dbc79" opacity="0.4"/>
   <!-- Split line -->
   <line x1="30" y1="180" x2="226" y2="180" stroke="#333" stroke-width="2"/>
-  <text x="48" y="215" font-family="monospace" font-size="18" fill="#666">terminal ai</text>
+  <text x="48" y="215" font-family="monospace" font-size="18" fill="#666">os assistant</text>
 </svg>

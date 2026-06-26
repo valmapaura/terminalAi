@@ -1,5 +1,5 @@
 /**
- * Command validator and safety checker for Terminal AI.
+ * Command validator and safety checker for OS Assistant.
  * Analyzes commands before injection to flag dangerous operations.
  */
 

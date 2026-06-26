@@ -27,7 +27,7 @@ Thumbs.db
 npm-debug.log*
 
 # Config (user-specific)
-terminal-ai-config.json
+os-assistant-config.json
 
 # Playwright test artifacts
 test-results/

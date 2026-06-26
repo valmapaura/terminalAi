@@ -1,7 +1,7 @@
 {
-  "name": "terminal-ai",
+  "name": "os-assistant",
   "version": "0.1.0",
-  "description": "Your AI copilot for the Windows terminal — open-source split-screen terminal + AI assistant powered by DeepSeek.",
+  "description": "Your AI copilot for the operating system — open-source split-screen terminal + AI assistant powered by DeepSeek.",
   "main": "dist/main/main.js",
   "scripts": {
     "build:main": "tsc -p tsconfig.main.json",

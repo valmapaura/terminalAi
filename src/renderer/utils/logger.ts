@@ -1,5 +1,5 @@
 /**
- * Debug logger for Terminal AI.
+ * Debug logger for OS Assistant.
  * 
  * Logs to console AND keeps an in-memory buffer that can be viewed
  * via `window.__AI_LOGS` in DevTools (Ctrl+Shift+I).
@@ -70,7 +70,7 @@ export const logger = {
 
   /** Dump all logs to console */
   dump: () => {
-    console.group('📋 Terminal AI Debug Logs');
+    console.group('📋 OS Assistant Debug Logs');
     for (const entry of logBuffer) {
       const prefix = `[${entry.timestamp}] [${entry.level.toUpperCase()}] [${entry.category}]`;
       if (entry.data !== undefined) {

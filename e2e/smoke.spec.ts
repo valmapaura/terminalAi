@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { launchApp, clearApiKey, clearSessions } from './helpers';
 
-test.describe('Terminal AI — App smoke tests', () => {
+test.describe('OS Assistant — App smoke tests', () => {
   test('app launches and renders the main UI', async () => {
     const { app, page } = await launchApp();
 
@@ -60,7 +60,7 @@ test.describe('Terminal AI — App smoke tests', () => {
   });
 });
 
-test.describe('Terminal AI — Tool invocation UI', () => {
+test.describe('OS Assistant — Tool invocation UI', () => {
   test('tool invocation blocks render with correct status classes', async () => {
     const { app, page } = await launchApp();
 

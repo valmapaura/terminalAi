@@ -1,5 +1,5 @@
 /**
- * Universal AI Provider API client for Terminal AI.
+ * Universal AI Provider API client for OS Assistant.
  *
  * Supports OpenAI-compatible, Anthropic Claude, and Google Gemini
  * — all with tool calling. Like VS Code Copilot, which supports
@@ -181,7 +181,7 @@ export const AI_TOOLS: ToolDefinition[] = [
 ];
 
 /**
- * Build the system prompt for Terminal AI's assistant.
+ * Build the system prompt for OS Assistant.
  * VS Code Copilot-aligned: concise identity, tool-centric, action-oriented.
  * No conflicting rules — the AI is told to act, not to hesitate.
  */
