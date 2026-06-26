@@ -39,13 +39,13 @@ export const AI_TOOLS: ToolDefinition[] = [
     type: 'function',
     function: {
       name: 'execute_command',
-      description: 'Run a Windows CMD or PowerShell command and return its output. Use this as your PRIMARY tool for ALL system operations. The command runs in the visible terminal so the user can see it execute. The output is captured and returned to you. Supports: networking (ping, ipconfig, netstat, nslookup, tracert), disk operations (chkdsk, fsutil, wmic diskdrive, dir), process management (tasklist, taskkill), system information (systeminfo, wmic os, ver), file operations (type, find, findstr, echo), and more. IMPORTANT: When the user asks you to check something or perform an operation, call this tool — do not hesitate or ask clarifying questions. Call this tool multiple times if needed for different commands.',
+      description: 'Run a command in the terminal and return its output. Use this as your PRIMARY tool for ALL system operations. The command runs in the visible terminal so the user can see it execute. The output is captured and returned to you. Supports: networking (ping, ipconfig, netstat, nslookup, curl), disk/file operations (dir/ls, find/findstr/grep, df/du/chkdsk), process management (ps/tasklist, kill/taskkill), system info (uname/systeminfo, neofetch/ver), and more. IMPORTANT: When the user asks you to check something or perform an operation, call this tool — do not hesitate or ask clarifying questions. Call this tool multiple times if needed for different commands.',
       parameters: {
         type: 'object',
         properties: {
           command: {
             type: 'string',
-            description: 'The command to execute (CMD or PowerShell)',
+            description: 'The command to execute',
           },
           description: {
             type: 'string',
@@ -104,7 +104,7 @@ export const AI_TOOLS: ToolDefinition[] = [
         properties: {
           path: {
             type: 'string',
-            description: 'Full path to the file (can use Windows paths like C:\\Users\\...)',
+            description: 'Full absolute path to the file (e.g., C:\\Users\\... on Windows, /home/... on Linux/Mac)',
           },
         },
         required: ['path'],
@@ -121,7 +121,7 @@ export const AI_TOOLS: ToolDefinition[] = [
         properties: {
           path: {
             type: 'string',
-            description: 'Full path to the directory (can use Windows paths like C:\\Users\\...)',
+            description: 'Full absolute path to the directory (e.g., C:\\Users\\... on Windows, /home/... on Linux/Mac)',
           },
         },
         required: ['path'],
@@ -186,11 +186,18 @@ export const AI_TOOLS: ToolDefinition[] = [
  * No conflicting rules — the AI is told to act, not to hesitate.
  */
 export function buildSystemPrompt(providerName?: string, systemInfo?: SystemInfo): string {
-  const context = systemInfo
-    ? `\nSystem context:\n${systemInfo.os} | ${systemInfo.architecture} | Shell: ${systemInfo.shell}\nPowerShell ${systemInfo.powershellVersion} | User: ${systemInfo.username} | ${systemInfo.cpu} | ${systemInfo.totalRamGB} GB RAM`
+  // Derive OS label from system info or default gracefully
+  const osName = systemInfo?.os || 'your';
+  const shellLabel = systemInfo?.shell || 'terminal';
+  const psLabel = systemInfo?.powershellVersion
+    ? `\nPowerShell ${systemInfo.powershellVersion}`
     : '';
 
-  return `You are a helpful Windows terminal assistant with access to tools.${context}
+  const context = systemInfo
+    ? `\nSystem context:\n${osName} | ${systemInfo.architecture} | Shell: ${shellLabel}${psLabel} | User: ${systemInfo.username} | ${systemInfo.cpu} | ${systemInfo.totalRamGB} GB RAM`
+    : '';
+
+  return `You are a helpful ${osName} terminal assistant with access to tools.${context}
 
 Your job is to get things done — quickly and reliably.
 
@@ -220,6 +227,7 @@ Style:
 
 const CHARS_PER_TOKEN = 4;
 const DEFAULT_MAX_CONTEXT_TOKENS = 128000;
+const MAX_TOOL_CONTENT_TOKENS = 6000; // truncate oversized tool results (~24K chars)
 
 /**
  * Rough token estimate for a text string (~4 chars per token for English).
@@ -243,8 +251,89 @@ function estimateMessageTokens(msg: ChatMessage): number {
 }
 
 /**
+ * Truncate oversized tool result content in-place so we don't
+ * have to drop entire messages (which would orphan parent tool_calls).
+ */
+function truncateLargeToolResults(messages: ChatMessage[]): void {
+  for (const msg of messages) {
+    if (msg.role === 'tool' && msg.content) {
+      const tokens = estimateTokens(msg.content);
+      if (tokens > MAX_TOOL_CONTENT_TOKENS) {
+        const maxLen = MAX_TOOL_CONTENT_TOKENS * CHARS_PER_TOKEN;
+        msg.content = msg.content.slice(0, maxLen) +
+          `\n...(truncated from ~${tokens} tokens to ${MAX_TOOL_CONTENT_TOKENS})`;
+      }
+    }
+  }
+}
+
+/**
+ * Remove any tool_calls messages that would orphan their tool results,
+ * and any tool result messages whose parent tool_calls got removed.
+ * Operates on the array in-place for performance.
+ */
+function removeOrphanedToolMessages(messages: ChatMessage[]): void {
+  // Collect all tool_call_ids that have a matching tool result
+  const toolResultIds = new Set<string>();
+  for (const msg of messages) {
+    if (msg.role === 'tool' && msg.toolCallId) {
+      toolResultIds.add(msg.toolCallId);
+    }
+  }
+
+  // Collect all tool_call_ids referenced by assistant tool_calls
+  const toolCallIds = new Set<string>();
+  for (const msg of messages) {
+    if (msg.role === 'assistant' && msg.toolCalls) {
+      for (const tc of msg.toolCalls) {
+        if (tc.id) toolCallIds.add(tc.id);
+      }
+    }
+  }
+
+  // For each assistant with tool_calls, check if ALL its tool calls have results
+  // If any are missing, drop the entire assistant message (tool calls without results cause 400 errors)
+  const assistantIdsToRemove = new Set<string>();
+  for (const msg of messages) {
+    if (msg.role === 'assistant' && msg.toolCalls && msg.id) {
+      for (const tc of msg.toolCalls) {
+        if (tc.id && !toolResultIds.has(tc.id)) {
+          assistantIdsToRemove.add(msg.id);
+          break;
+        }
+      }
+    }
+  }
+
+  // Remove orphaned tool results (results whose parent tool_calls got removed)
+  const toolIdsToRemove = new Set<string>();
+  for (const msg of messages) {
+    if (msg.role === 'tool' && msg.toolCallId && !toolCallIds.has(msg.toolCallId)) {
+      toolIdsToRemove.add(msg.id);
+    }
+  }
+
+  // Filter out everything marked for removal
+  if (assistantIdsToRemove.size > 0 || toolIdsToRemove.size > 0) {
+    let removedCount = 0;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i];
+      if (assistantIdsToRemove.has(msg.id) || toolIdsToRemove.has(msg.id)) {
+        messages.splice(i, 1);
+        removedCount++;
+      }
+    }
+    if (removedCount > 0) {
+      // eslint-disable-next-line no-console
+      console.warn(`[TRIM] Removed ${removedCount} orphaned tool-related message(s) to prevent 400 errors`);
+    }
+  }
+}
+
+/**
  * Trim messages to fit within the model's context window.
- * Removes oldest messages first, keeping as many recent messages as possible.
+ * First truncates oversized tool content, then trims oldest messages.
+ * Ensures no assistant message with tool_calls is left without its tool results.
  * Always keeps at least the last message.
  *
  * @param messages - Full message array
@@ -256,10 +345,15 @@ export function trimMessagesForContextWindow(
   systemPromptTokens: number,
   maxContextTokens: number = DEFAULT_MAX_CONTEXT_TOKENS
 ): ChatMessage[] {
-  const maxMsgTokens = maxContextTokens - systemPromptTokens;
-  if (maxMsgTokens <= 0 || messages.length <= 1) return messages;
+  if (messages.length <= 1) return messages;
 
-  // Work backwards from newest, collecting messages until we hit the budget
+  // Step 1: Truncate oversized tool result content (preserves message structure)
+  truncateLargeToolResults(messages);
+
+  // Step 2: Walk newest→oldest, collect what fits
+  const maxMsgTokens = maxContextTokens - systemPromptTokens;
+  if (maxMsgTokens <= 0) return messages;
+
   let totalTokens = 0;
   const keep: ChatMessage[] = [];
 
@@ -278,7 +372,20 @@ export function trimMessagesForContextWindow(
     keep.push(messages[messages.length - 1]);
   }
 
+  // Step 3: Remove any orphaned tool messages
+  removeOrphanedToolMessages(keep);
+
   return keep;
+}
+
+/**
+ * Validate message array before sending to the API.
+ * Returns true if valid, false if problems were found and fixed.
+ */
+export function validateAndFixMessages(messages: ChatMessage[]): boolean {
+  const before = messages.length;
+  removeOrphanedToolMessages(messages);
+  return messages.length === before;
 }
 
 /**

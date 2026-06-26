@@ -12,7 +12,7 @@ function createWindow(): void {
     height: 900,
     minWidth: 900,
     minHeight: 600,
-    title: 'Terminal AI',
+    title: 'OS Assistant',
     backgroundColor: '#1e1e1e',
     frame: false,
     webPreferences: {

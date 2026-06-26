@@ -1,5 +1,5 @@
-appId: com.terminal-ai.app
-productName: Terminal AI
+appId: com.os-assistant.app
+productName: OS Assistant
 directories:
   output: release
   buildResources: assets

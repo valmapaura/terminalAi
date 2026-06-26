@@ -648,7 +648,7 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
         <div className="chat-messages">
           {!hasApiKey && displayMessages.length === 0 && !isStreaming && (
             <div className="chat-empty setup-prompt">
-              <h2>Welcome to Terminal AI</h2>
+              <h2>Welcome to OS Assistant</h2>
               <p>Connect your AI provider to get started.</p>
               <button className="btn-primary" onClick={onOpenSettings}>
                 Configure API Key

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { ChatMessage, ToolCall, ProviderConfig, AIProviderType, SystemInfo, AgentMode } from '../types';
-import { AI_TOOLS, buildSystemPrompt, streamChatCompletion, trimMessagesForContextWindow, estimateTokens } from '../utils/ai-client';
+import { AI_TOOLS, buildSystemPrompt, streamChatCompletion, trimMessagesForContextWindow, estimateTokens, validateAndFixMessages } from '../utils/ai-client';
 import { getDefaultProviderConfig, AI_PROVIDERS } from '../types';
 import { logger } from '../utils/logger';
 
@@ -250,6 +250,9 @@ export function useAI(): UseAIReturn {
         if (currentMsgs.length < beforeTrim) {
           logger.info('CYCLE', `Trimmed ${beforeTrim - currentMsgs.length} oldest message(s) to stay within 128K context window`);
         }
+
+        // ── Validate message structure before sending (prevents 400 errors from orphaned tool calls) ──
+        validateAndFixMessages(currentMsgs);
 
         // ── Call AI (streams tokens into UI) ──
         let result: { content: string; toolCalls: ToolCall[]; finishReason: string; reasoning?: string };

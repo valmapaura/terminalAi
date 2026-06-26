@@ -1,6 +1,6 @@
-# ◆ Terminal AI
+# ◆ OS Assistant
 
-> **Your AI copilot for the terminal.** Multi-provider, split-screen terminal + AI assistant.
+> **Your AI assistant for the operating system.** Multi-provider, split-screen terminal + AI assistant that can control your machine through natural language.
 
 ---
 
@@ -50,8 +50,8 @@
 ### Install & Run
 
 ```bash
-git clone https://github.com/your-username/terminal-ai.git
-cd terminal-ai
+git clone https://github.com/your-username/os-assistant.git
+cd os-assistant
 npm install
 npm run build
 npm start
@@ -81,7 +81,7 @@ npm start
 ## Project Structure
 
 ```
-terminal-ai/
+os-assistant/
 ├── src/
 │   ├── main/                 # Electron main process
 │   │   ├── main.ts           # App entry, frameless window
@@ -117,6 +117,31 @@ npm run dev     # Watch mode — auto-rebuild on changes
 npm run build   # Production build
 npm run dist    # Package installer
 ```
+
+---
+
+## Vision
+
+OS Assistant is not just a terminal tool. It is a step toward an **Operating System Assistant** — an AI that understands and operates your machine the way a human would.
+
+### The Long-Term Goal
+
+We envision an AI that can:
+
+- **Navigate any desktop application** — click buttons, fill forms, read UI elements, and perform multi-step workflows across any Windows application, not just the terminal.
+- **Understand system state holistically** — monitor processes, services, event logs, network connections, and disk activity to give you a complete picture of what your computer is doing.
+- **Automate complex OS tasks** — install software, configure system settings, manage users, troubleshoot drivers, and orchestrate multi-tool workflows without requiring custom scripting.
+- **Learn from your patterns** — remember how you like your system configured, anticipate maintenance needs, and proactively suggest optimizations.
+- **Cross-platform parity** — deliver the same deep integration on macOS and Linux, adapting to each platform's unique APIs and conventions.
+- **Operate with transparency and safety** — always show what it intends to do, ask for confirmation on destructive actions, and let you audit every decision it made.
+
+### Why This Matters
+
+The terminal is the most powerful interface to a computer — but it has a steep learning curve. GUIs are accessible but limit what you can express. OS Assistant bridges the gap: it lets you express intent in natural language and translates that into precise, safe, multi-step operations across the full breadth of your operating system.
+
+We start with the terminal because it is the most direct, most capable interface to the machine. From there, we expand to window management, application control, and eventually full OS orchestration — all while keeping you in control.
+
+> **Today: A terminal AI that runs commands. Tomorrow: An AI that runs your computer — with your permission.**
 
 ---
 

@@ -42,6 +42,20 @@ export interface AppAPI {
   getVersion(): Promise<string>;
 }
 
+export interface SystemAPI {
+  getInfo(): Promise<{
+    os: string;
+    architecture: string;
+    shell: string;
+    powershellVersion: string;
+    username: string;
+    hostname: string;
+    cpu: string;
+    totalRamGB: number;
+    cpuCores: number;
+  }>;
+}
+
 export interface AIToolsAPI {
   executeCommand(command: string): Promise<string>;
 }
@@ -164,6 +178,10 @@ contextBridge.exposeInMainWorld('windowControlsAPI', {
     ipcRenderer.removeAllListeners('window:maximize-changed');
   },
 } satisfies WindowControlsAPI);
+
+contextBridge.exposeInMainWorld('systemAPI', {
+  getInfo: () => ipcRenderer.invoke('system:get-info'),
+} satisfies SystemAPI);
 
 contextBridge.exposeInMainWorld('chatAPI', {
   listSessions: () => ipcRenderer.invoke('chat:list-sessions'),
