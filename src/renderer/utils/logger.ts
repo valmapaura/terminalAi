@@ -19,7 +19,7 @@ interface LogEntry {
 }
 
 const MAX_LOG_ENTRIES = 2000;
-const logBuffer: LogEntry[] = [];
+let logBuffer: LogEntry[] = [];
 
 function isDebugEnabled(): boolean {
   try {
@@ -85,6 +85,29 @@ export const logger = {
   /** Get all log entries */
   getLogs: (): LogEntry[] => [...logBuffer],
 
+  /** Persist recent logs to localStorage for crash recovery */
+  persistToStorage: () => {
+    try {
+      const recent = logBuffer.slice(-50);
+      localStorage.setItem('__AI_LOGS_BACKUP', JSON.stringify(recent));
+    } catch { /* quota exceeded — ignore */ }
+  },
+
+  /** Restore logs from previous session */
+  restoreFromStorage: () => {
+    try {
+      const stored = localStorage.getItem('__AI_LOGS_BACKUP');
+      if (stored) {
+        const entries = JSON.parse(stored) as LogEntry[];
+        logBuffer.push(...entries);
+        if (logBuffer.length > MAX_LOG_ENTRIES) {
+          logBuffer = logBuffer.slice(-MAX_LOG_ENTRIES);
+        }
+        localStorage.removeItem('__AI_LOGS_BACKUP');
+      }
+    } catch { /* ignore */ }
+  },
+
   /** Clear logs */
   clear: () => {
     logBuffer.length = 0;
@@ -117,4 +140,16 @@ try {
   if (window.location.hash.includes('debug')) {
     logger.setDebug(true);
   }
+} catch { /* ignore */ }
+
+// Restore logs from previous session (crash recovery)
+try {
+  logger.restoreFromStorage();
+} catch { /* ignore */ }
+
+// Persist logs to localStorage before page unload (crash recovery)
+try {
+  window.addEventListener('beforeunload', () => {
+    logger.persistToStorage();
+  });
 } catch { /* ignore */ }

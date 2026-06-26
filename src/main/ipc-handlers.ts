@@ -110,7 +110,8 @@ function encryptValue(value: string): string {
   if (safeStorage.isEncryptionAvailable()) {
     return safeStorage.encryptString(value).toString('base64');
   }
-  // Fallback: simple base64 (still better than plaintext)
+  // Fallback: base64 is NOT encryption, but prevents casual shoulder-surfing
+  console.warn('[CONFIG] safeStorage not available — API key is stored with base64 encoding only, which is NOT secure encryption.');
   return Buffer.from(value, 'utf-8').toString('base64');
 }
 
@@ -141,8 +142,30 @@ export function registerIpcHandlers(terminalManager: TerminalManager): void {
     return id;
   });
 
+  // Terminal write batching — coalesces small writes into larger chunks
+  // to reduce IPC overhead during paste operations and rapid key repeat
+  const writeBuffer = new Map<string, string>();
+  let writeTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function flushWrites(): void {
+    for (const [id, data] of writeBuffer) {
+      terminalManager.writeToTerminal(id, data);
+    }
+    writeBuffer.clear();
+    writeTimer = null;
+  }
+
+  function scheduleWriteFlush(): void {
+    if (writeTimer) return;
+    // Use setTimeout(0) for microtask-level batching
+    writeTimer = setTimeout(flushWrites, 0);
+  }
+
   ipcMain.on('terminal:write', (_, { id, data }: { id: string; data: string }) => {
-    terminalManager.writeToTerminal(id, data);
+    // Accumulate data in buffer and flush asynchronously
+    const existing = writeBuffer.get(id) || '';
+    writeBuffer.set(id, existing + data);
+    scheduleWriteFlush();
   });
 
   ipcMain.on('terminal:resize', (_, { id, cols, rows }: { id: string; cols: number; rows: number }) => {
@@ -256,9 +279,19 @@ export function registerIpcHandlers(terminalManager: TerminalManager): void {
     };
   });
 
+  // Whitelist of allowed settings keys to prevent corruption and prototype pollution
+  const ALLOWED_SETTINGS_KEYS = new Set([
+    'theme', 'fontSize', 'splitDirection', 'showTerminal', 'agentMode'
+  ]);
+
   ipcMain.handle('settings:save', (_, { settings }: { settings: Record<string, unknown> }) => {
     const cfg = loadConfig();
-    Object.assign(cfg, settings);
+    // Reject prototype pollution attempts and only allow whitelisted keys
+    for (const [key, value] of Object.entries(settings)) {
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+      if (!ALLOWED_SETTINGS_KEYS.has(key)) continue;
+      cfg[key] = value;
+    }
     saveConfig(cfg);
     return true;
   });
@@ -268,12 +301,34 @@ export function registerIpcHandlers(terminalManager: TerminalManager): void {
     return terminalManager.getBuffer(id, lineCount);
   });
 
+  // Paths that the AI should never read (system files, credentials, etc.)
+  const BLOCKED_FILE_PATTERNS = [
+    /[\\/]etc[\\/]shadow$/i,
+    /[\\/]etc[\\/]passwd$/i,
+    /[\\/]config[\\/]config\.json$/i,
+    /[\\/]os-assistant-config\.json$/i,
+    /[\\/]os-assistant-memory\.json$/i,
+    /[\\/]os-assistant-models\.json$/i,
+    /[\\/]os-assistant-chats[\\/]/i,
+    /\.env$/i,
+    /\.env\.\w+$/i,
+    /id_rsa$/,
+    /id_ed25519$/,
+    /known_hosts$/,
+  ];
+
   // AI tool execution — run a command silently and return output
   // Safe file read — uses Node.js fs, no shell
   ipcMain.handle('ai:read-file', (_, { filePath }: { filePath: string }) => {
     try {
       // Prevent path traversal
       const resolved = path.resolve(filePath);
+      // Block sensitive system files
+      for (const pattern of BLOCKED_FILE_PATTERNS) {
+        if (pattern.test(resolved)) {
+          return { success: false, error: 'Access denied: this file is blocked for security', content: '' };
+        }
+      }
       if (!fs.existsSync(resolved)) {
         return { success: false, error: 'File not found', content: '' };
       }
@@ -432,7 +487,18 @@ export function registerIpcHandlers(terminalManager: TerminalManager): void {
   }
 
   ipcMain.handle('memory:save-note', (_, { key, value }: { key: string; value: string }) => {
+    // Enforce size limits: 1KB per key, 10KB per value, 100KB total
+    const MAX_KEY_LENGTH = 1024;
+    const MAX_VALUE_LENGTH = 10_240;
+    const MAX_TOTAL_SIZE = 102_400;
+    if (!key || key.length > MAX_KEY_LENGTH) return false;
+    if (!value || value.length > MAX_VALUE_LENGTH) return false;
     const memory = loadMemory();
+    // Check total size
+    const currentTotal = Object.entries(memory).reduce((sum, [k, v]) => sum + k.length + v.length, 0);
+    const newEntrySize = key.length + value.length;
+    const existingSize = memory[key] ? key.length + memory[key].length : 0;
+    if (currentTotal - existingSize + newEntrySize > MAX_TOTAL_SIZE) return false;
     memory[key] = value;
     saveMemory(memory);
     return true;

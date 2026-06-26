@@ -132,6 +132,11 @@ export function useAI(): UseAIReturn {
   const setAgentMode = useCallback((mode: AgentMode) => {
     agentModeRef.current = mode;
     setAgentModeState(mode);
+    // If switching away from interactive mode while a prompt is pending, auto-resolve it
+    if (mode !== 'interactive' && pendingResolverRef.current) {
+      pendingResolverRef.current('approve');
+      pendingResolverRef.current = null;
+    }
   }, []);
 
   const approvePending = useCallback(() => {
@@ -154,6 +159,11 @@ export function useAI(): UseAIReturn {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
+    }
+    // If there's a pending interactive prompt, resolve it to prevent deadlock
+    if (pendingResolverRef.current) {
+      pendingResolverRef.current('skip');
+      pendingResolverRef.current = null;
     }
     setIsStreaming(false);
     processingRef.current = false;
@@ -367,8 +377,16 @@ Please review your previous response and try again. If you were making tool call
         // ── Interactive mode: pause for user approval ──
         if (agentModeRef.current === 'interactive') {
           setPendingToolCalls(validToolCalls);
-          const decision = await new Promise<'approve' | 'always' | 'skip'>(resolve => {
-            pendingResolverRef.current = resolve;
+          const decision = await new Promise<'approve' | 'always' | 'skip'>((resolve) => {
+            // Safety timeout: if user doesn't respond in 5 minutes, auto-approve to prevent deadlock
+            const timeoutId = setTimeout(() => {
+              logger.warn('INTERACTIVE', 'Interactive prompt timed out after 5 min, auto-approving');
+              resolve('approve');
+            }, 300_000);
+            pendingResolverRef.current = (val: 'approve' | 'always' | 'skip') => {
+              clearTimeout(timeoutId);
+              resolve(val);
+            };
           });
           setPendingToolCalls(null);
           pendingResolverRef.current = null;
@@ -472,6 +490,11 @@ Please review your previous response and try again. If you were making tool call
 
   const clearMessages = useCallback(() => {
     if (abortControllerRef.current) { abortControllerRef.current.abort(); abortControllerRef.current = null; }
+    // Resolve any pending interactive prompt to prevent deadlock
+    if (pendingResolverRef.current) {
+      pendingResolverRef.current('skip');
+      pendingResolverRef.current = null;
+    }
     processingRef.current = false;
     setMessages([]);
   }, []);

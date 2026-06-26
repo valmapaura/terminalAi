@@ -32,14 +32,9 @@ export function useTerminal() {
     }
   }, []);
 
-  const executeAndCapture = useCallback(async (command: string, timeout?: number): Promise<string> => {
-    const result = await window.terminalAPI.executeAndCapture(command, timeout || 30000);
-    if (!result.success) {
-      // Fall back to hidden execution
-      return await window.aiToolsAPI.executeCommand(command);
-    }
-    return result.output;
-  }, []);
+  // NOTE: executeAndCapture logic is in useAI.ts's executeTool() which calls
+  // window.terminalAPI.executeAndCapture directly. This hook function is kept
+  // as a future convenience wrapper if needed from the terminal context.
 
   const killTerminal = useCallback(async () => {
     const id = terminalRef.current;
@@ -104,7 +99,6 @@ export function useTerminal() {
     createTerminal,
     writeToTerminal,
     injectCommand,
-    executeAndCapture,
     killTerminal,
     loadSettings,
     saveSettings,

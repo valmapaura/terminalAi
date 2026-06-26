@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { SplitPane } from './components/SplitPane';
 import { TerminalPane } from './components/TerminalPane';
 import { ChatPane } from './components/ChatPane';
@@ -174,6 +175,7 @@ export const App: React.FC = () => {
   const closeWindow = () => window.windowControlsAPI.close();
 
   return (
+    <ErrorBoundary>
     <div className={`app app-theme-${settings.theme}`} style={{ fontSize: settings.fontSize }}>
       {/* Minimal title bar — just window controls and drag region */}
       <div className="title-bar">
@@ -296,5 +298,6 @@ export const App: React.FC = () => {
         />
       )}
     </div>
+    </ErrorBoundary>
   );
 };

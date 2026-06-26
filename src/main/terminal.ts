@@ -86,7 +86,8 @@ export class TerminalManager {
 
   /** Get last N lines of terminal output (for AI tool context) */
   getBuffer(id?: string, lineCount: number = 50): string {
-    const targetId = id || Array.from(this.buffers.keys())[0];
+    // Prefer the specified ID, then the last created terminal, then the first buffer
+    const targetId = id || this.lastCreatedTerminalId || Array.from(this.buffers.keys())[0];
     if (!targetId) return '';
 
     const buf = this.buffers.get(targetId);
@@ -112,7 +113,15 @@ export class TerminalManager {
       let resolved = false;
 
       // Regex to detect command prompts at end of output
-      const promptRegex = /[\\$>#] ?$/m;
+      // Supports: $, >, #, %, :, C:\path>, PS C:\path>, λ, » and common prompt endings
+      const promptRegex = /[\\$>#%:>λ»] ?$/m;
+
+      // Shared cleanup: dispose listener + clear timer
+      const cleanup = () => {
+        resolved = true;
+        clearTimeout(timer);
+        disp.dispose();
+      };
 
       const dataHandler = (data: string) => {
         if (resolved) return;
@@ -127,8 +136,7 @@ export class TerminalManager {
         // Detect prompt — the command is done when we see a prompt pattern
         // at the end of a non-empty output
         if (bufferSincePrompt.length > 10 && promptRegex.test(bufferSincePrompt.trim())) {
-          resolved = true;
-          clearTimeout(timer);
+          cleanup();
           resolve({ output });
         }
       };
@@ -142,7 +150,7 @@ export class TerminalManager {
       // Safety timeout
       timer = setTimeout(() => {
         if (!resolved) {
-          resolved = true;
+          cleanup();
           resolve({ output });
         }
       }, timeoutMs);
@@ -170,11 +178,11 @@ export class TerminalManager {
 
       term.onData((data: string) => {
         output += data;
-        // Stop capturing if we see the prompt again (simple heuristic)
-        if (output.length > 5000) {
+        // Stop capturing if output exceeds limit (truncation guard)
+        if (output.length > 100_000) {
           clearTimeout(timeout);
           term.kill();
-          resolve(output);
+          resolve(output + '\n...(output truncated at 100KB)');
         }
       });
 

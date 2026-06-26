@@ -294,20 +294,6 @@ html, body, #root {
   align-items: center;
 }
 
-.title-bar-btn {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 13px;
-  padding: 2px 8px;
-  cursor: pointer;
-  transition: all 0.1s;
-  line-height: 1;
-  height: 100%;
-  display: flex;
-  align-items: center;
-}
-
 .title-bar-btn:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
@@ -1440,6 +1426,47 @@ html, body, #root {
 
 .command-preview-danger .command-preview-header {
   border-bottom-color: var(--accent-red);
+}
+
+/* Command Preview — Inline Editor (replaces native prompt()) */
+.command-preview-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.command-preview-edit-input {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--accent-blue);
+  border-radius: 4px;
+  padding: 12px;
+  resize: vertical;
+  min-height: 60px;
+  outline: none;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.command-preview-edit-input:focus {
+  border-color: var(--accent-blue-hover);
+  box-shadow: 0 0 0 2px rgba(59, 142, 234, 0.3);
+}
+
+.command-preview-edit-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: right;
+  user-select: none;
+}
+
+.command-preview-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 /* ============================================================

@@ -145,16 +145,17 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
   }, [loadSessions]);
 
   // Debounced auto-save when messages change — uses refs to avoid stale closures
+  // Skips saving while streaming to avoid spamming disk on every token
   useEffect(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    if (!apiMessages.length) return;
+    if (!apiMessages.length || isStreaming) return;
     saveTimerRef.current = setTimeout(() => {
       saveSession(messagesRef.current);
-    }, 1500);
+    }, 2000);
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, [apiMessages, saveSession]);
+  }, [apiMessages, saveSession, isStreaming]);
 
   // ─── Load a session ───
   const handleLoadSession = useCallback(async (sessionId: string) => {
