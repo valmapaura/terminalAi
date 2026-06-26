@@ -1,0 +1,102 @@
+import { useState, useCallback, useEffect, useRef } from 'react';
+import type { AppSettings } from '../types';
+
+export function useTerminal() {
+  const [terminalId, setTerminalId] = useState<string | null>(null);
+  const [isReady, setIsReady] = useState(false);
+  const [terminalCount, setTerminalCount] = useState(0);
+  const terminalRef = useRef<string | null>(null);
+
+  const createTerminal = useCallback(async () => {
+    const id = await window.terminalAPI.create();
+    if (id) {
+      terminalRef.current = id;
+      setTerminalId(id);
+      setIsReady(true);
+      setTerminalCount((c) => c + 1);
+    }
+    return id;
+  }, []);
+
+  const writeToTerminal = useCallback((data: string) => {
+    const id = terminalRef.current;
+    if (id) {
+      window.terminalAPI.write(id, data);
+    }
+  }, []);
+
+  const injectCommand = useCallback((command: string) => {
+    const id = terminalRef.current;
+    if (id) {
+      window.terminalAPI.write(id, command + '\r');
+    }
+  }, []);
+
+  const executeAndCapture = useCallback(async (command: string, timeout?: number): Promise<string> => {
+    const result = await window.terminalAPI.executeAndCapture(command, timeout || 30000);
+    if (!result.success) {
+      // Fall back to hidden execution
+      return await window.aiToolsAPI.executeCommand(command);
+    }
+    return result.output;
+  }, []);
+
+  const killTerminal = useCallback(async () => {
+    const id = terminalRef.current;
+    if (id) {
+      await window.terminalAPI.kill(id);
+      terminalRef.current = null;
+      setTerminalId(null);
+      setIsReady(false);
+    }
+  }, []);
+
+  /** Load settings from secure storage */
+  const loadSettings = useCallback(async (): Promise<AppSettings | null> => {
+    try {
+      return {
+        theme: 'dark',
+        fontSize: 14,
+        splitDirection: 'horizontal',
+
+        activeProvider: 'deepseek',
+        providers: {},
+        showTerminal: true,
+      };
+    } catch {
+      return null;
+    }
+  }, []);
+
+  /** Save settings to secure storage */
+  const saveSettings = useCallback(async (settings: AppSettings): Promise<void> => {
+    if (settings.activeProvider) {
+      await window.providerAPI.setActive(settings.activeProvider);
+    }
+  }, []);
+
+  // Auto-create terminal on mount, kill on unmount
+  useEffect(() => {
+    createTerminal();
+    return () => {
+      const id = terminalRef.current;
+      if (id) {
+        window.terminalAPI.kill(id);
+        terminalRef.current = null;
+      }
+    };
+  }, []);
+
+  return {
+    terminalId,
+    isReady,
+    terminalCount,
+    createTerminal,
+    writeToTerminal,
+    injectCommand,
+    executeAndCapture,
+    killTerminal,
+    loadSettings,
+    saveSettings,
+  };
+}

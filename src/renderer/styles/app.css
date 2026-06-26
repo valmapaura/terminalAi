@@ -1,0 +1,2217 @@
+/* ============================================================
+   Terminal AI — VS Code Modern Themes
+   ============================================================ */
+
+/* --- xterm imports --- */
+@import '@xterm/xterm/css/xterm.css';
+
+/* ============================================================
+   Design Tokens — VS Code Dark Modern (current VS Code default)
+   ============================================================ */
+:root,
+.app-theme-dark {
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #252526;
+  --bg-tertiary: #2d2d2d;
+  --bg-hover: #2a2d2e;
+  --bg-active: #37373d;
+  --bg-overlay: rgba(0, 0, 0, 0.6);
+  --bg-input: #3c3c3c;
+  --bg-badge: #4d4d4d;
+
+  --text-primary: #cccccc;
+  --text-secondary: #969696;
+  --text-muted: #6e6e6e;
+  --text-link: #4fc1ff;
+  --text-warning: #d7ba7d;
+  --text-error: #f48771;
+  --text-success: #6a9955;
+
+  --border-color: #3c3c3c;
+  --border-focus: #007fd4;
+
+  --accent-blue: #0078d4;
+  --accent-blue-hover: #1c8ae8;
+  --accent-green: #0dbc79;
+  --accent-red: #f14c4c;
+  --accent-yellow: #d7ba7d;
+  --accent-purple: #b180d7;
+  --accent-cyan: #4fc1ff;
+
+  --accent-blue-bg: rgba(55, 148, 255, 0.08);
+
+  --status-bar-bg: #007acc;
+  --status-bar-text: #ffffff;
+
+  --title-bar-height: 30px;
+  --status-bar-height: 22px;
+
+  --font-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
+  --font-size: 13px;
+  --font-size-sm: 12px;
+  --font-size-xs: 11px;
+}
+
+/* ============================================================
+   VS Code Light Modern Theme
+   ============================================================ */
+.app-theme-light {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f3f3f3;
+  --bg-tertiary: #ececec;
+  --bg-hover: #e8e8e8;
+  --bg-active: #dcdcdc;
+  --bg-overlay: rgba(0, 0, 0, 0.3);
+  --bg-input: #ffffff;
+  --bg-badge: #c4c4c4;
+
+  --text-primary: #1e1e1e;
+  --text-secondary: #616161;
+  --text-muted: #999999;
+  --text-link: #005fb8;
+  --text-warning: #8a6d3b;
+  --text-error: #c41e3a;
+  --text-success: #1b8a4b;
+
+  --border-color: #d4d4d4;
+  --border-focus: #005fb8;
+
+  --accent-blue: #005fb8;
+  --accent-blue-hover: #0066cc;
+  --accent-green: #1b8a4b;
+  --accent-red: #c41e3a;
+  --accent-yellow: #8a6d3b;
+  --accent-purple: #7b3fa0;
+  --accent-cyan: #005fb8;
+
+  --accent-blue-bg: rgba(0, 95, 184, 0.08);
+
+  --status-bar-bg: #005fb8;
+  --status-bar-text: #ffffff;
+
+  --title-bar-height: 30px;
+  --status-bar-height: 22px;
+
+  --font-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
+  --font-size: 13px;
+  --font-size-sm: 12px;
+  --font-size-xs: 11px;
+}
+
+/* ============================================================
+   Solarized Dark Theme
+   ============================================================ */
+.app-theme-solarized-dark {
+  --bg-primary: #002b36;
+  --bg-secondary: #073642;
+  --bg-tertiary: #0a4a56;
+  --bg-hover: #0a4a56;
+  --bg-active: #145b68;
+  --bg-overlay: rgba(0, 0, 0, 0.7);
+  --bg-input: #073642;
+  --bg-badge: #145b68;
+
+  --text-primary: #839496;
+  --text-secondary: #657b83;
+  --text-muted: #586e75;
+  --text-link: #268bd2;
+  --text-warning: #b58900;
+  --text-error: #dc322f;
+  --text-success: #859900;
+
+  --border-color: #094552;
+  --border-focus: #268bd2;
+
+  --accent-blue: #268bd2;
+  --accent-blue-hover: #3a9ee6;
+  --accent-green: #859900;
+  --accent-red: #dc322f;
+  --accent-yellow: #b58900;
+  --accent-purple: #6c71c4;
+  --accent-cyan: #2aa198;
+
+  --accent-blue-bg: rgba(38, 139, 210, 0.12);
+
+  --status-bar-bg: #073642;
+  --status-bar-text: #839496;
+
+  --title-bar-height: 30px;
+  --status-bar-height: 22px;
+
+  --font-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
+  --font-size: 13px;
+  --font-size-sm: 12px;
+  --font-size-xs: 11px;
+}
+
+/* ============================================================
+   Solarized Light Theme
+   ============================================================ */
+.app-theme-solarized-light {
+  --bg-primary: #fdf6e3;
+  --bg-secondary: #eee8d5;
+  --bg-tertiary: #e4ddc7;
+  --bg-hover: #e4ddc7;
+  --bg-active: #d5cfb8;
+  --bg-overlay: rgba(0, 0, 0, 0.2);
+  --bg-input: #fdf6e3;
+  --bg-badge: #d5cfb8;
+
+  --text-primary: #657b83;
+  --text-secondary: #839496;
+  --text-muted: #93a1a1;
+  --text-link: #268bd2;
+  --text-warning: #b58900;
+  --text-error: #dc322f;
+  --text-success: #859900;
+
+  --border-color: #d5cfb8;
+  --border-focus: #268bd2;
+
+  --accent-blue: #268bd2;
+  --accent-blue-hover: #1a7fc6;
+  --accent-green: #859900;
+  --accent-red: #dc322f;
+  --accent-yellow: #b58900;
+  --accent-purple: #6c71c4;
+  --accent-cyan: #2aa198;
+
+  --accent-blue-bg: rgba(38, 139, 210, 0.08);
+
+  --status-bar-bg: #eee8d5;
+  --status-bar-text: #657b83;
+
+  --title-bar-height: 30px;
+  --status-bar-height: 22px;
+
+  --font-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
+  --font-size: 13px;
+  --font-size-sm: 12px;
+  --font-size-xs: 11px;
+}
+
+/* ============================================================
+   Reset & Base
+   ============================================================ */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-primary);
+  font-size: var(--font-size);
+  line-height: 1.5;
+}
+
+/* ============================================================
+   App Layout — VS Code Three-Column Structure
+   ============================================================ */
+.app {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-primary);
+}
+
+.app-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.app-main {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ============================================================
+   Title Bar — Minimal drag region with window controls
+   ============================================================ */
+.title-bar {
+  display: flex;
+  align-items: center;
+  height: var(--title-bar-height);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0;
+  user-select: none;
+  flex-shrink: 0;
+  -webkit-app-region: drag;
+}
+
+.title-bar-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.title-bar-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--bg-tertiary);
+  padding: 1px 8px;
+  border-radius: 3px;
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title-bar-right {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  gap: 0;
+  -webkit-app-region: no-drag;
+}
+
+.title-bar-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: all 0.1s;
+  line-height: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.title-bar-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: all 0.1s;
+  line-height: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.title-bar-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* More prominent settings gear button */
+.settings-gear-btn {
+  width: auto;
+  padding: 0 12px;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  margin: 4px 2px;
+  transition: all 0.15s;
+}
+
+.settings-gear-btn:hover {
+  border-color: var(--border-color);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.settings-gear-icon {
+  font-size: 15px;
+}
+
+.settings-gear-label {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ============================================================
+   Window Controls — Windows-style minimize, maximize, close
+   ============================================================ */
+.window-controls {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.window-control {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 11px;
+  width: 46px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.window-control:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.window-control-close:hover {
+  background: var(--accent-red);
+  color: #ffffff;
+}
+
+/* ============================================================
+   Status Bar — VS Code Modern Bottom Bar
+   ============================================================ */
+.status-bar {
+  display: flex;
+  align-items: center;
+  height: var(--status-bar-height);
+  background: var(--bg-primary);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  padding: 0 4px;
+  flex-shrink: 0;
+  user-select: none;
+  border-top: 1px solid var(--border-color);
+}
+
+.status-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex: 1;
+}
+
+.status-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.status-bar-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 6px;
+  height: var(--status-bar-height);
+  cursor: default;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.status-bar-action {
+  cursor: pointer;
+}
+
+.status-bar-action:hover {
+  background: var(--bg-hover);
+}
+
+.status-indicator {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-indicator.online {
+  background: #89d185;
+}
+
+.status-indicator.offline {
+  background: var(--text-muted);
+  opacity: 0.4;
+}
+
+.status-bar-item.streaming {
+  color: var(--accent-blue);
+}
+
+.streaming-dot {
+  width: 6px;
+  height: 6px;
+  background: #89d185;
+  border-radius: 50%;
+  animation: pulse-dot 1.2s ease-in-out infinite;
+  display: inline-block;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+.status-bar-item.version {
+  color: color-mix(in srgb, var(--status-bar-text) 70%, transparent);
+}
+
+/* ============================================================
+   Split Pane — Subtle Divider
+   ============================================================ */
+/* Divider itself: 1px thin line matching border — barely visible */
+.split-pane-divider {
+  position: relative;
+  flex-shrink: 0;
+  z-index: 5;
+  background: var(--border-color);
+  transition: background 0.15s;
+  touch-action: none;
+}
+
+/* Horizontal divider (left | right): 1px wide, full height */
+.divider-horizontal {
+  width: 1px;
+  height: 100%;
+}
+
+/* Vertical divider (top | bottom): 1px tall, full width */
+.divider-vertical {
+  height: 1px;
+  width: 100%;
+}
+
+/* Invisible wider hit area for easy grabbing — extends 4px on each side */
+.split-pane-divider::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  transition: background 0.15s;
+  border-radius: 2px;
+}
+
+.divider-horizontal::before {
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  right: -4px;
+}
+
+.divider-vertical::before {
+  left: 0;
+  right: 0;
+  top: -4px;
+  bottom: -4px;
+}
+
+/* On hover, expand to a visible 3px bar with accent color */
+.split-pane-divider:hover,
+.split-pane-divider:active {
+  z-index: 10;
+}
+
+.divider-horizontal:hover,
+.divider-horizontal:active {
+  width: 3px;
+  background: var(--accent-blue);
+}
+
+.divider-vertical:hover,
+.divider-vertical:active {
+  height: 3px;
+  background: var(--accent-blue);
+}
+
+/* Grab cursor only on the divider, never globally */
+.divider-horizontal { cursor: col-resize; }
+.divider-vertical { cursor: row-resize; }
+
+/* ============================================================
+   Terminal Pane
+   ============================================================ */
+.terminal-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-primary);
+}
+
+.terminal-header {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  height: 32px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.terminal-hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  margin-left: auto;
+  opacity: 0.6;
+}
+
+
+
+.terminal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.terminal-header-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.1s;
+}
+
+.terminal-header-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.terminal-container {
+  flex: 1;
+  padding: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.terminal-container .xterm {
+  height: 100%;
+  padding: 4px 8px;
+}
+
+/* Ensure xterm viewport and textarea capture keyboard input */
+.terminal-container .xterm-viewport {
+  overflow-y: auto !important;
+}
+
+.terminal-container .xterm textarea {
+  position: absolute !important;
+  opacity: 0 !important;        /* visually hidden but still focusable */
+  pointer-events: auto !important;
+  z-index: 10 !important;
+}
+
+.terminal-container:focus-within {
+  outline: none;
+}
+
+.terminal-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  gap: 8px;
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent-blue);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+   Chat Pane — Copilot-Inspired Chat UI
+   ============================================================ */
+.chat-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-secondary);
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  height: 32px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.chat-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.chat-header-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--bg-badge);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Settings button in chat header — more visible than other header actions */
+.chat-header-settings-btn {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 8px;
+  font-size: 13px;
+  border-radius: 4px;
+  transition: all 0.15s;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-right: 2px;
+}
+
+.chat-header-settings-btn:hover {
+  border-color: var(--border-color);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.chat-header-settings-btn .settings-gear-icon {
+  font-size: 14px;
+}
+
+.chat-header-settings-btn .settings-gear-label {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.btn-clear-chat {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 13px;
+  border-radius: 3px;
+  transition: all 0.1s;
+  line-height: 1;
+}
+
+.btn-clear-chat:hover {
+  color: var(--text-error);
+  background: var(--bg-hover);
+}
+
+.streaming-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--accent-blue) 10%, transparent);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.streaming-label {
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+/* --- Messages Area --- */
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chat-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  text-align: center;
+  gap: 12px;
+}
+
+.chat-empty p {
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
+/* Setup prompt — shown when no API key is configured */
+.setup-prompt {
+  gap: 16px;
+}
+
+.setup-prompt h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.setup-prompt .btn-primary {
+  font-size: 13px;
+  padding: 8px 20px;
+  margin-top: 4px;
+}
+
+.setup-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  max-width: 240px;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* --- Message Bubbles --- */
+.message {
+  display: flex;
+  gap: 8px;
+  padding: 6px 0;
+  animation: messageIn 0.15s ease-out;
+}
+
+/* User messages aligned to the right */
+.message-user {
+  justify-content: flex-end;
+}
+
+.message-user .message-content {
+  background: var(--bg-tertiary);
+  border-radius: 8px 4px 8px 8px;
+  padding: 8px 12px;
+  max-width: 85%;
+}
+
+/* Assistant messages aligned to the left */
+.message-assistant {
+  justify-content: flex-start;
+}
+
+.message-assistant .message-content {
+  max-width: 100%;
+}
+
+/* Tool call messages inline */
+.message-tool {
+  justify-content: flex-start;
+}
+
+@keyframes messageIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.message-content {
+  min-width: 0;
+}
+
+/* Tool invocation — like VS Code Copilot's ChatToolInvocationPart */
+.tool-invocation {
+  margin: 4px 0;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.tool-invocation-error {
+  border-color: var(--accent-red);
+}
+
+.tool-invocation-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 10px;
+  background: var(--bg-tertiary);
+  border: none;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s;
+  text-align: left;
+}
+
+.tool-invocation-header:hover {
+  background: var(--bg-hover);
+}
+
+.tool-invocation-status {
+  display: inline-flex;
+  align-items: center;
+  width: 16px;
+  height: 16px;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tool-status-icon {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tool-status-ok {
+  color: var(--accent-green);
+}
+
+.tool-status-error {
+  color: var(--accent-red);
+  font-weight: 800;
+}
+
+.tool-invocation-label {
+  flex: 1;
+  text-align: left;
+}
+
+.tool-invocation-chevron {
+  font-size: 9px;
+  color: var(--text-muted);
+  transition: transform 0.15s;
+  line-height: 1;
+}
+
+.tool-invocation-chevron.expanded {
+  transform: rotate(180deg);
+}
+
+.tool-invocation-body {
+  border-top: 1px solid var(--border-color);
+  padding: 8px 12px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.tool-invocation-content {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono);
+}
+
+.message-text {
+  font-size: var(--font-size);
+  line-height: 1.6;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* --- Code Blocks in Chat --- */
+.chat-code-block {
+  margin: 8px 0;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.chat-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.btn-code-copy {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.btn-code-copy:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+.btn-code-copy.injected,
+.btn-inject.injected {
+  background: var(--accent-green);
+  color: #ffffff;
+  border-color: var(--accent-green);
+}
+
+.chat-code-block pre {
+  padding: 10px 12px;
+  overflow-x: auto;
+  margin: 0;
+}
+
+.chat-code-block code {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--accent-green);
+  white-space: pre;
+}
+
+.chat-inline-code {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  background: var(--bg-tertiary);
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: var(--accent-cyan);
+}
+
+.chat-blockquote {
+  border-left: 3px solid var(--accent-blue);
+  padding-left: 10px;
+  margin: 6px 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.chat-paragraph {
+  margin-bottom: 4px;
+}
+
+.chat-spacer {
+  height: 4px;
+}
+
+.message-text strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.message-text p {
+  margin-bottom: 4px;
+}
+
+/* --- Command Suggestions --- */
+.command-actions {
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.command-suggestion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 4px 8px;
+  gap: 8px;
+}
+
+.command-code {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--accent-green);
+  overflow-x: auto;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.command-buttons {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* --- Input Area --- */
+.chat-input-area {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+}
+
+.chat-input-wrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 4px;
+  transition: border-color 0.15s;
+}
+
+.chat-input-wrapper:focus-within {
+  border-color: var(--border-focus);
+}
+
+.chat-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-family: var(--font-primary);
+  font-size: var(--font-size);
+  padding: 6px 8px;
+  resize: none;
+  outline: none;
+  line-height: 1.5;
+  max-height: 120px;
+}
+
+.chat-input::placeholder {
+  color: var(--text-muted);
+}
+
+.chat-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--bg-tertiary, var(--bg-secondary));
+  border-color: transparent;
+}
+
+/* Input area wrapper gets a subtle pulse border when streaming */
+.chat-input-wrapper.streaming .chat-input:disabled {
+  opacity: 0.6;
+}
+
+.chat-input-wrapper.streaming {
+  position: relative;
+}
+
+.chat-input-wrapper.streaming::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  border: 1px solid var(--accent-blue);
+  opacity: 0.3;
+  animation: streaming-pulse 1.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes streaming-pulse {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 0.5; }
+}
+
+.btn-send {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-blue);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.1s;
+  flex-shrink: 0;
+}
+
+.btn-send:hover:not(:disabled) {
+  background: var(--accent-blue-hover);
+}
+
+.btn-send:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.send-loading {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Stop button — replaces send button during streaming (like VS Code Copilot) */
+.btn-stop {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-red, #c42b2b);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.btn-stop:hover {
+  background: var(--accent-red-hover, #e03838);
+}
+
+.stop-icon {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* Progress bar — animated bar during AI generation */
+.streaming-progress-bar {
+  height: 2px;
+  background: var(--accent-blue);
+  animation: streaming-progress 1.5s ease-in-out infinite;
+  transform-origin: left;
+  z-index: 10;
+}
+
+@keyframes streaming-progress {
+  0% { transform: scaleX(0); opacity: 1; }
+  50% { transform: scaleX(1); opacity: 0.8; }
+  100% { transform: scaleX(0); opacity: 1; }
+}
+
+.chat-input-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: right;
+  padding-top: 4px;
+  user-select: none;
+}
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+.icon-button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 14px;
+  padding: 4px 6px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.1s;
+}
+
+.icon-button:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.btn-primary {
+  background: var(--accent-blue);
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: var(--font-size);
+  transition: all 0.1s;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-blue-hover);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: var(--font-size);
+  transition: all 0.1s;
+}
+
+.btn-secondary:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-muted);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Loading content inside a button — spinner + text */
+.btn-loading-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-inject {
+  background: rgba(13, 188, 121, 0.12);
+  color: var(--accent-green);
+  border: 1px solid rgba(13, 188, 121, 0.25);
+  padding: 3px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: all 0.1s;
+  white-space: nowrap;
+}
+
+.btn-inject:hover {
+  background: rgba(13, 188, 121, 0.25);
+  border-color: var(--accent-green);
+}
+
+/* ============================================================
+   Command Preview — VS Code Protection Dialog Style
+   ============================================================ */
+.preview-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.12s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.command-preview {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  width: 520px;
+  max-width: 90vw;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.15s ease-out;
+  overflow: hidden;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.command-preview-danger {
+  border-color: var(--accent-red);
+  box-shadow: 0 8px 32px rgba(241, 76, 76, 0.25);
+}
+
+.command-preview-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-tertiary);
+}
+
+.command-preview-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.command-preview-label {
+  font-size: var(--font-size);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.command-preview-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.command-preview-desc {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.command-preview-warnings {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.command-preview-warning-item {
+  font-size: var(--font-size-xs);
+  color: var(--accent-red);
+  background: rgba(241, 76, 76, 0.08);
+  padding: 4px 10px;
+  border-radius: 4px;
+  border-left: 3px solid var(--accent-red);
+}
+
+.command-preview-text {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  display: block;
+  padding: 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.command-preview-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+}
+
+.command-preview-actions .allow-btn {
+  background: var(--accent-red);
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: var(--font-size);
+  font-weight: 500;
+  transition: all 0.1s;
+}
+
+.command-preview-actions .allow-btn:hover {
+  background: #e03535;
+}
+
+.command-preview-danger .command-preview-header {
+  border-bottom-color: var(--accent-red);
+}
+
+/* ============================================================
+   Settings Panel
+   ============================================================ */
+.settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.12s ease-out;
+}
+
+.settings-panel {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  width: 520px;
+  max-width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.15s ease-out;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  background: var(--bg-secondary);
+}
+
+.settings-header h2 {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Settings tab bar */
+.settings-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  position: sticky;
+  top: 43px;
+  z-index: 1;
+}
+
+.settings-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.1s;
+  font-family: var(--font-primary);
+}
+
+.settings-tab:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.settings-tab.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent-blue);
+  background: transparent;
+}
+
+.settings-body {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.settings-section {
+  margin-bottom: 20px;
+}
+
+.provider-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.provider-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.1s ease;
+  font-size: var(--font-size-sm);
+}
+
+.provider-option:hover {
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.provider-option.active {
+  border-color: var(--accent-blue);
+  background: var(--accent-blue-bg, rgba(55, 148, 255, 0.08));
+  color: var(--text-primary);
+}
+
+.provider-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.provider-name {
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.settings-provider-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  font-style: italic;
+  margin-top: -4px;
+  margin-bottom: 12px;
+}
+
+.settings-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.test-pass {
+  color: var(--accent-green);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.test-fail {
+  color: var(--accent-red);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.settings-section h3 {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.settings-hint {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.settings-hint a {
+  color: var(--accent-blue);
+  text-decoration: none;
+}
+
+.settings-hint a:hover {
+  text-decoration: underline;
+}
+
+.api-key-input {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+.setting-row span {
+  font-size: var(--font-size);
+  color: var(--text-primary);
+}
+
+/* --- Form Inputs --- */
+.text-input {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  padding: 6px 10px;
+  font-size: var(--font-size);
+  font-family: var(--font-mono);
+  outline: none;
+  transition: border-color 0.15s;
+  flex: 1;
+}
+
+.text-input:focus {
+  border-color: var(--border-focus);
+}
+
+.select-input {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  padding: 5px 10px;
+  font-size: var(--font-size);
+  outline: none;
+  cursor: pointer;
+}
+
+.select-input:focus {
+  border-color: var(--border-focus);
+}
+
+.checkbox-input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--accent-blue);
+}
+
+/* ============================================================
+   Model Management — inline dropdown + actions + add form
+   ============================================================ */
+.model-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.model-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.model-row-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.btn-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.1s;
+  padding: 0;
+}
+
+.btn-icon:hover {
+  border-color: var(--text-muted);
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.btn-icon:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-icon-danger:hover {
+  color: var(--accent-red);
+  border-color: var(--accent-red);
+  background: rgba(196, 43, 43, 0.08);
+}
+
+.fetch-error {
+  font-size: var(--font-size-sm);
+  color: var(--accent-red);
+  margin-top: 6px;
+}
+
+.add-model-form {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+}
+
+/* ============================================================
+   Scrollbar — VS Code Thin Scrollbar
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ============================================================
+   Text Selection — VS Code Modern
+   ============================================================ */
+::selection {
+  background: var(--accent-blue-bg, rgba(55, 148, 255, 0.3));
+  color: inherit;
+}
+
+/* ============================================================
+   Chat Body — flex container for messages + history sidebar
+   ============================================================ */
+.chat-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ============================================================
+   Chat History Sidebar — like VS Code Copilot's session list
+   ============================================================ */
+.chat-history-sidebar {
+  width: 240px;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.chat-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  height: 32px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.chat-history-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.chat-history-search {
+  padding: 6px 8px;
+  flex-shrink: 0;
+}
+
+.chat-search-input {
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: var(--font-size-xs);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.chat-search-input:focus {
+  border-color: var(--accent-blue);
+}
+
+.chat-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.chat-history-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.chat-history-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.chat-history-item {
+  position: relative;
+  padding: 8px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+  transition: background 0.1s;
+}
+
+.chat-history-item:hover {
+  background: var(--bg-hover);
+}
+
+.chat-history-item.active {
+  background: color-mix(in srgb, var(--accent-blue) 10%, var(--bg-primary));
+  border-left: 2px solid var(--accent-blue);
+}
+
+.chat-history-item-title {
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+  font-weight: 500;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 20px;
+}
+
+.chat-history-item-meta {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.chat-history-item-delete {
+  position: absolute;
+  top: 8px;
+  right: 6px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px;
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity 0.1s;
+  line-height: 1;
+}
+
+.chat-history-item:hover .chat-history-item-delete {
+  opacity: 1;
+}
+
+.chat-history-item-delete:hover {
+  color: var(--text-error);
+  background: var(--bg-hover);
+}
+
+/* ============================================================
+   Chat Title Editing
+   ============================================================ */
+.chat-title-input {
+  background: var(--bg-secondary);
+  border: 1px solid var(--accent-blue);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 3px;
+  outline: none;
+  width: 180px;
+}
+
+/* ============================================================
+   Tiny Spinner — color-cycling three-dot spinner for LLM wait
+   ============================================================ */
+.tiny-spinner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+}
+
+.tiny-spinner-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent-blue);
+  box-shadow: 0 0 4px rgba(0, 120, 212, 0.5);
+  animation: tiny-dot-bounce 0.9s ease-in-out infinite, dot-color-cycle-bright 2.4s ease-in-out infinite;
+}
+
+.tiny-spinner-dot:nth-child(2) {
+  animation-delay: 0.15s, 0.15s;
+}
+
+.tiny-spinner-dot:nth-child(3) {
+  animation-delay: 0.3s, 0.3s;
+}
+
+@keyframes tiny-dot-bounce {
+  0%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-7px); }
+}
+
+@keyframes dot-color-cycle-bright {
+  0%, 100% { background: var(--accent-blue); box-shadow: 0 0 6px rgba(0, 120, 212, 0.6); }
+  33% { background: var(--accent-green, #0dbc79); box-shadow: 0 0 6px rgba(13, 188, 121, 0.6); }
+  66% { background: #a855f7; box-shadow: 0 0 6px rgba(168, 85, 247, 0.6); }
+}
+
+/* Inline spinner — for use inside buttons / alongside text */
+.inline-spinner {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  vertical-align: middle;
+}
+
+.inline-spinner-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: inline-dot-bounce 0.8s ease-in-out infinite;
+  opacity: 0.6;
+}
+
+.inline-spinner-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.inline-spinner-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes inline-dot-bounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* LLM Waiting indicator — shown in messages area while waiting for response */
+.llm-waiting-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.llm-waiting-indicator .llm-waiting-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* AI response placeholder — shown at bottom of message list while AI generates next response */
+.ai-response-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 16px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  animation: fadeIn 0.3s ease-out;
+}
+
+.ai-response-placeholder-label {
+  opacity: 0.8;
+}
+
+/* Terminal command execution indicator */
+.terminal-executing-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  background: rgba(13, 188, 121, 0.1);
+  border: 1px solid rgba(13, 188, 121, 0.2);
+  border-radius: 12px;
+  color: var(--accent-green);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+}
+
+/* Reasoning block */
+.reasoning-block {
+  margin: 4px 0 8px 0;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-tertiary);
+}
+
+.reasoning-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.reasoning-toggle:hover {
+  background: var(--bg-hover);
+}
+
+.reasoning-toggle-label {
+  flex: 1;
+  font-weight: 500;
+}
+
+.reasoning-toggle-chevron {
+  font-size: 10px;
+  transition: transform 0.15s;
+}
+
+.reasoning-toggle-chevron.expanded {
+  transform: rotate(180deg);
+}
+
+.reasoning-content {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-primary);
+}
+
+.reasoning-content pre {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+/* ============================================================
+   Theme transition — smooth switch
+   ============================================================ */
+.app,
+.app * {
+  transition: background-color 0.1s ease, border-color 0.1s ease, color 0.1s ease;
+}
+
+/* ============================================================
+   Debug Settings
+   ============================================================ */
+.debug-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.debug-actions .btn-primary,
+.debug-actions .btn-secondary {
+  flex: 0 1 auto;
+  white-space: nowrap;
+}
+
+.debug-hint kbd {
+  background: var(--bg-input, #3c3c3c);
+  border: 1px solid var(--border-color, #3c3c3c);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+}
+
+.debug-hint code {
+  background: var(--bg-tertiary, #2d2d2d);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.debug-config-pre {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Danger button for destructive actions (clear chat, etc.) */
+.btn-clear-danger {
+  background: transparent;
+  border: 1px solid var(--accent-red, #f14c4c);
+  color: var(--accent-red, #f14c4c);
+  border-radius: 4px;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.btn-clear-danger:hover {
+  background: var(--accent-red, #f14c4c);
+  color: #ffffff;
+}
+
+/* Chat cleared banner toast */
+.chat-cleared-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  background: var(--accent-green, #0dbc79);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  animation: fadeInDown 0.25s ease-out;
+}
+
+.chat-cleared-icon {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================
+   Utility
+   ============================================================ */
+.hidden {
+  display: none !important;
+}

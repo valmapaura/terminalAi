@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <rect width="256" height="256" rx="32" fill="#1e1e1e"/>
+  <!-- Terminal bracket -->
+  <text x="48" y="140" font-family="monospace" font-size="80" font-weight="bold" fill="#0078d4">&gt;_</text>
+  <!-- AI sparkle -->
+  <circle cx="180" cy="80" r="8" fill="#0dbc79" opacity="0.9"/>
+  <circle cx="200" cy="110" r="5" fill="#0dbc79" opacity="0.6"/>
+  <circle cx="170" cy="120" r="4" fill="#0dbc79" opacity="0.4"/>
+  <!-- Split line -->
+  <line x1="30" y1="180" x2="226" y2="180" stroke="#333" stroke-width="2"/>
+  <text x="48" y="215" font-family="monospace" font-size="18" fill="#666">terminal ai</text>
+</svg>
