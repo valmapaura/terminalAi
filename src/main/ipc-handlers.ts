@@ -163,7 +163,7 @@ export function registerIpcHandlers(terminalManager: TerminalManager): void {
 
   function scheduleWriteFlush(): void {
     if (writeTimer) return;
-    // Use setTimeout(0) for microtask-level batching
+    // Batch writes across one event-loop tick before flushing
     writeTimer = setTimeout(flushWrites, 0);
   }
 
@@ -647,14 +647,16 @@ export function registerIpcHandlers(terminalManager: TerminalManager): void {
     return { success: true, terminalId: targetId };
   });
 
-  // ─── Terminal Execute & Capture — inject command into visible terminal and return output ───
-  ipcMain.handle('terminal:execute-and-capture', async (_, { command, timeout }: { command: string; timeout?: number }) => {
+  // ─── Terminal Execute & Capture — runs in VISIBLE terminal so user can watch the AI work ───
+  // Uses marker-based completion detection (__CSTART__/__CEND__) which resolves instantly
+  // when the command finishes — no polling, no prompt-regex guessing.
+  ipcMain.handle('terminal:execute-and-capture', async (_, { command }: { command: string }) => {
     const targetId = terminalManager.getLastTerminalId();
     if (!targetId) {
-      return { success: false, error: 'No terminal available. Open a terminal first.', output: '' };
+      return { success: false, error: 'No terminal available.', output: '' };
     }
     try {
-      const result = await terminalManager.executeOnTerminal(targetId, command, timeout || 30000);
+      const result = await terminalManager.executeOnTerminal(targetId, command);
       return { success: true, output: result.output, terminalId: targetId };
     } catch (err) {
       return { success: false, error: String(err), output: '' };

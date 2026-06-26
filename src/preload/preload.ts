@@ -11,7 +11,7 @@ export interface TerminalAPI {
   /** Inject a command into the visible terminal — types it and presses Enter */
   injectCommand(command: string): Promise<{ success: boolean; error?: string; terminalId?: string }>;
   /** Execute a command in the visible terminal and capture output */
-  executeAndCapture(command: string, timeout?: number): Promise<{ success: boolean; output: string; error?: string }>;
+  executeAndCapture(command: string): Promise<{ success: boolean; output: string; error?: string }>;
 }
 
 export interface SettingsAPI {
@@ -142,7 +142,7 @@ contextBridge.exposeInMainWorld('terminalAPI', {
     return ipcRenderer.invoke('terminal:read-buffer', { lineCount });
   },
   injectCommand: (command: string) => ipcRenderer.invoke('terminal:inject', { command }),
-  executeAndCapture: (command: string, timeout?: number) => ipcRenderer.invoke('terminal:execute-and-capture', { command, timeout }),
+  executeAndCapture: (command: string) => ipcRenderer.invoke('terminal:execute-and-capture', { command }),
 } satisfies TerminalAPI);
 
 contextBridge.exposeInMainWorld('settingsAPI', {

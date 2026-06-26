@@ -31,6 +31,7 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
   const [input, setInput] = useState('');
   const [injectedCode, setInjectedCode] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // ─── Chat Session State ───
   const [showHistory, setShowHistory] = useState(false);
@@ -56,6 +57,9 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
 
   // ─── "Chat cleared" confirmation toast ───
   const [justCleared, setJustCleared] = useState(false);
+  // Flag set by handleNewChat to suppress the "Chat cleared" toast
+  // — starting a new chat ≠ clearing the current one.
+  const newChatFlagRef = useRef(false);
 
   // ─── Detect external message clear (e.g. from Settings → Clear Chat) ───
   useEffect(() => {
@@ -64,12 +68,16 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
 
     // If messages were just emptied from outside ChatPane (prev > 0 and now 0),
     // reset local state and show a brief "Chat cleared" confirmation.
+    // BUT skip the toast if this was a handleNewChat call (messages reset for fresh session).
     if (apiMessages.length === 0 && prev > 0) {
       setCurrentSessionId(null);
       setSessionTitle('New Chat');
       setEditingTitle(false);
-      setJustCleared(true);
-      setTimeout(() => setJustCleared(false), 2000);
+      if (!newChatFlagRef.current) {
+        setJustCleared(true);
+        setTimeout(() => setJustCleared(false), 2000);
+      }
+      newChatFlagRef.current = false;
     }
   }, [apiMessages.length]);
 
@@ -77,6 +85,15 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [displayMessages]);
+
+  // ─── Auto-focus input on mount and after streaming ends ───
+  useEffect(() => {
+    if (!isStreaming) {
+      // Small delay to let React re-render complete
+      const id = setTimeout(() => inputRef.current?.focus(), 100);
+      return () => clearTimeout(id);
+    }
+  }, [isStreaming]);
 
   // ─── Session List Loading ───
   const loadSessions = useCallback(async () => {
@@ -176,6 +193,7 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
 
   // ─── New Chat ───
   const handleNewChat = useCallback(() => {
+    newChatFlagRef.current = true;
     clearMessages();
     setCurrentSessionId(null);
     setSessionTitle('New Chat');
@@ -267,13 +285,17 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
   };
 
   // ─── Reasoning Section (collapsible, like VS Code Copilot's thinking section) ───
-  const ReasoningBlock: React.FC<{ reasoning: string }> = ({ reasoning }) => {
-    const [expanded, setExpanded] = useState(false);
+  const ReasoningBlock: React.FC<{ reasoning: string; isStreaming?: boolean }> = ({ reasoning, isStreaming }) => {
+    const [expanded, setExpanded] = useState(true);
+    useEffect(() => {
+      // Auto-expand when reasoning is actively streaming
+      if (isStreaming) setExpanded(true);
+    }, [isStreaming]);
     return (
       <div className="reasoning-block">
         <button className="reasoning-toggle" onClick={() => setExpanded(!expanded)}>
-          <TinySpinner />
-          <span className="reasoning-toggle-label">Reasoning</span>
+          {isStreaming ? <TinySpinner /> : <span className="reasoning-done-icon">✓</span>}
+          <span className="reasoning-toggle-label">{isStreaming ? 'Reasoning...' : 'Reasoned'}</span>
           <span className={`reasoning-toggle-chevron${expanded ? ' expanded' : ''}`}>&#9662;</span>
         </button>
         {expanded && (
@@ -573,14 +595,6 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
         </div>
         <div className="chat-header-actions">
           <button
-            className="chat-header-settings-btn"
-            onClick={onOpenSettings}
-            title="Settings (Ctrl+,)"
-          >
-            <span className="settings-gear-icon">⚙</span>
-            <span className="settings-gear-label">Settings</span>
-          </button>
-          <button
             className="btn-clear-chat"
             onClick={() => { setShowHistory(!showHistory); if (!showHistory) loadSessions(); }}
             title="Chat history"
@@ -684,7 +698,7 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
               <div className="message-content">
                 {/* Reasoning content — collapsible, like VS Code Copilot */}
                 {msg.reasoning && (
-                  <ReasoningBlock reasoning={msg.reasoning} />
+                  <ReasoningBlock reasoning={msg.reasoning} isStreaming={msg.id === 'streaming-assistant' && isStreaming} />
                 )}
                 {/* Tool invocation — like VS Code Copilot's ChatToolInvocationPart */}
                 {msg.toolName ? (
@@ -754,6 +768,7 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
       <div className="chat-input-area">
         <div className={`chat-input-wrapper${isStreaming ? ' streaming' : ''}`}>
           <textarea
+            ref={inputRef}
             className="chat-input"
             placeholder={isStreaming ? 'Thinking...' : 'Ask me to run a command...'}
             value={input}
@@ -761,6 +776,7 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
             onKeyDown={handleKeyDown}
             rows={1}
             disabled={isStreaming}
+            autoFocus
           />
           {isStreaming ? (
             <button className="btn-stop" onClick={onStop} title="Stop generation">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { AppSettings, AIProviderType, ProviderConfig } from '../types';
 import { AI_PROVIDERS, getDefaultProviderConfig } from '../types';
 import { TinySpinner } from './TinySpinner';
@@ -20,15 +20,23 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
   const [localLabel, setLocalLabel] = useState('');
   const [isCustomModel, setIsCustomModel] = useState(false);
   const [activeTab, setActiveTab] = useState<'api' | 'appearance' | 'debug' | 'agent'>('api');
-  const [saved, setSaved] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<'idle' | 'success' | 'fail'>('idle');
+  const [debugLogging, setDebugLogging] = useState(false);
   // Model management state (like VS Code's chatLanguageModels.json)
   const [modelEntries, setModelEntries] = useState<Array<{ id: string; provider: string; source: 'auto' | 'manual' }>>([]);
   const [fetchingModels, setFetchingModels] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [newModelName, setNewModelName] = useState('');
   const [showAddModel, setShowAddModel] = useState(false);
+  // Snapshot for Cancel
+  const snapshotRef = useRef<Record<string, unknown>>({});
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   // Load all provider configs and models on mount
   useEffect(() => {
@@ -61,6 +69,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
         setIsCustomModel(isCustom);
         setLocalLabel(current.label || '');
 
+        // Snapshot for Cancel
+        snapshotRef.current = {
+          activeProvider: active,
+          localKey: current.apiKey || '',
+          localBaseUrl: current.baseUrl || getDefaultProviderConfig(active).baseUrl,
+          localModel: model,
+          isCustomModel: isCustom,
+          localLabel: current.label || '',
+        };
+
         // Load model entries
         const modelsData = await window.modelsAPI.getAll();
         setModelEntries(modelsData.models || []);
@@ -74,9 +92,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
   const currentConfig = providerConfigs[activeProvider] || getDefaultProviderConfig(activeProvider);
 
   const handleProviderChange = async (type: AIProviderType) => {
-    // Save current provider config
-    await saveCurrentProvider();
-
     setActiveProvider(type);
     await window.providerAPI.setActive(type);
 
@@ -123,11 +138,59 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
     }));
   };
 
-  const handleSave = async () => {
+  // Validate: if API key is set, a model must also be chosen
+  const validate = (): string | null => {
+    const trimmedKey = localKey.trim();
+    const trimmedModel = localModel.trim();
+    if (trimmedKey && !trimmedModel) {
+      return 'Please select or enter a model before saving your API key.';
+    }
+    return null;
+  };
+
+  const saveAll = async () => {
     await saveCurrentProvider();
     onUpdate({ activeProvider });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+
+    // Update snapshot so Cancel after Apply is safe
+    snapshotRef.current = {
+      activeProvider,
+      localKey: localKey.trim(),
+      localBaseUrl,
+      localModel,
+      isCustomModel,
+      localLabel,
+    };
+  };
+
+  // ── OK: validate, save all, close ──
+  const handleOk = async () => {
+    const err = validate();
+    if (err) { showToast(err, 'error'); return; }
+    await saveAll();
+    onClose();
+  };
+
+  // ── Apply: validate, save all, toast ──
+  const handleApply = async () => {
+    const err = validate();
+    if (err) { showToast(err, 'error'); return; }
+    await saveAll();
+    showToast('Settings applied successfully', 'success');
+  };
+
+  // ── Cancel: restore snapshot, close ──
+  const handleCancel = () => {
+    const snap = snapshotRef.current as Record<string, unknown>;
+    if (snap.activeProvider && snap.activeProvider !== activeProvider) {
+      setActiveProvider(snap.activeProvider as AIProviderType);
+    }
+    setLocalKey((snap.localKey as string) || '');
+    setLocalBaseUrl((snap.localBaseUrl as string) || '');
+    setLocalModel((snap.localModel as string) || '');
+    setIsCustomModel(snap.isCustomModel === true);
+    setLocalLabel((snap.localLabel as string) || '');
+    onClose();
   };
 
   const handleTest = async () => {
@@ -165,7 +228,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
       ...prev,
       [activeProvider]: { ...prev[activeProvider], apiKey: '' },
     }));
-    onUpdate({ activeProvider });
+    showToast('API key cleared', 'success');
   };
 
   // ─── Model Management ───
@@ -254,7 +317,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
             className={`settings-tab ${activeTab === 'debug' ? 'active' : ''}`}
             onClick={() => setActiveTab('debug')}
           >
-            🐛 Debug
+            � Diagnostics
           </button>
           <button
             className={`settings-tab ${activeTab === 'agent' ? 'active' : ''}`}
@@ -465,28 +528,29 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
                 </div>
               )}
 
-              {/* Save & Test */}
-              <div className="settings-actions">
-                <button className="btn-primary" onClick={handleSave}>
-                  {saved ? '✅ Saved' : 'Save'}
-                </button>
-                <button
-                  className="btn-secondary"
-                  onClick={handleTest}
-                  disabled={testing || !localKey}
-                >
-                  {testing ? (
-                    <span className="btn-loading-content">
-                      <TinySpinner />
-                      Testing...
-                    </span>
-                  ) : '🔌 Test Connection'}
-                </button>
-                {testResult === 'success' && <span className="test-pass">✓ Connected</span>}
-                {testResult === 'fail' && <span className="test-fail">✗ Connection failed</span>}
-                <button className="btn-secondary" onClick={handleClear} disabled={!localKey}>
-                  Clear Key
-                </button>
+              {/* Test Connection */}
+              <div className="settings-section">
+                <h3>Test Connection</h3>
+                <p className="settings-hint">Verify your API endpoint is reachable with the current settings.</p>
+                <div className="test-row">
+                  <button
+                    className="btn-secondary"
+                    onClick={handleTest}
+                    disabled={testing || !localKey}
+                  >
+                    {testing ? (
+                      <span className="btn-loading-content">
+                        <TinySpinner />
+                        Testing...
+                      </span>
+                    ) : '🔌 Test Connection'}
+                  </button>
+                  {testResult === 'success' && <span className="test-pass">✓ Connected</span>}
+                  {testResult === 'fail' && <span className="test-fail">✗ Connection failed</span>}
+                  <button className="btn-secondary" onClick={handleClear} disabled={!localKey}>
+                    Clear Key
+                  </button>
+                </div>
               </div>
             </>
           )}
@@ -586,100 +650,102 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
 
           {activeTab === 'debug' && (
             <>
+              {/* Logging Toggle — shows current mode clearly */}
               <div className="settings-section">
                 <h3>🪵 API Logging</h3>
                 <p className="settings-hint">
-                  Logs record everything sent to and received from the AI provider API.
-                  This helps diagnose issues like unexpected responses.
+                  When <strong>on</strong>, all API requests and responses are printed to the DevTools console
+                  so you can inspect exactly what the AI sends and receives.
                 </p>
-                <div className="debug-actions">
+                <div className="setting-row">
+                  <span>Debug logging</span>
+                  <span className="debug-status-badge">
+                    {debugLogging ? (
+                      <span className="debug-badge-on">● ON</span>
+                    ) : (
+                      <span className="debug-badge-off">○ OFF</span>
+                    )}
+                  </span>
                   <button
-                    className="btn-primary"
+                    className={`btn-secondary ${debugLogging ? 'btn-active' : ''}`}
                     onClick={() => {
+                      const next = !debugLogging;
+                      setDebugLogging(next);
                       try {
-                        const logger = (window as unknown as Record<string, unknown>).__AI_LOGS as {
-                          setDebug: (v: boolean) => void;
-                          dump: () => void;
-                          clear: () => void;
-                        };
-                        logger.setDebug(true);
-                        alert('✅ Debug logging enabled! Open DevTools (Ctrl+Shift+I) and check the console.');
+                        (window as any).__AI_LOGS?.setDebug?.(next);
                       } catch { /* ignore */ }
+                      const label = next ? 'ON' : 'OFF';
+                      showToast(`Debug logging turned ${label}`, 'success');
                     }}
+                    style={{ minWidth: 80 }}
                   >
-                    🎯 Enable Debug & Open Console
-                  </button>
-                  <button
-                    className="btn-secondary"
-                    onClick={() => {
-                      try {
-                        const logger = (window as unknown as Record<string, unknown>).__AI_LOGS as {
-                          dump: () => void;
-                        };
-                        logger.dump();
-                      } catch { /* ignore */ }
-                    }}
-                  >
-                    📋 Dump Logs to Console
-                  </button>
-                  <button
-                    className="btn-secondary"
-                    onClick={() => {
-                      try {
-                        const logger = (window as unknown as Record<string, unknown>).__AI_LOGS as {
-                          clear: () => void;
-                        };
-                        logger.clear();
-                        alert('🧹 Logs cleared.');
-                      } catch { /* ignore */ }
-                    }}
-                  >
-                    🧹 Clear Logs
+                    {debugLogging ? 'Turn Off' : 'Turn On'}
                   </button>
                 </div>
-                <div className="debug-hint" style={{ marginTop: 12 }}>
-                  <p><strong>How to view logs:</strong></p>
-                  <ol style={{ margin: '8px 0 0 20px', lineHeight: 1.8 }}>
-                    <li>Press <kbd>Ctrl+Shift+I</kbd> to open DevTools</li>
-                    <li>Click the <strong>Console</strong> tab</li>
-                    <li>Look for <code>[AI:…]</code> prefixed messages</li>
-                    <li>Send a message in chat and watch the logs appear</li>
-                  </ol>
-                </div>
+                {debugLogging && (
+                  <p className="settings-hint" style={{ color: 'var(--text-success)', marginTop: 4 }}>
+                    ✓ Logging is active — open <kbd>Ctrl+Shift+I</kbd> → Console tab → look for <code>[AI:…]</code> messages
+                  </p>
+                )}
               </div>
 
-              <div className="settings-section">
-                <h3>🔍 Common Issues</h3>
-                <div className="debug-hint">
-                  <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 2 }}>
-                    <li><strong>No response / always says hello:</strong> Check logs for the API response content. If the log shows a 200 OK but a generic greeting, the system prompt may need adjustment.</li>
-                    <li><strong>401 Unauthorized:</strong> Your API key is invalid or expired.</li>
-                    <li><strong>404 Not found:</strong> Check the base URL and model name.</li>
-                    <li><strong>CORS errors:</strong> The API endpoint doesn't allow browser requests — use a proxy or different provider.</li>
-                  </ul>
+              {/* Actions — only shown when logging is on */}
+              {debugLogging && (
+                <div className="settings-section">
+                  <h3>Actions</h3>
+                  <div className="debug-actions">
+                    <button
+                      className="btn-secondary"
+                      onClick={() => {
+                        try {
+                          (window as any).__AI_LOGS?.dump?.();
+                          showToast('Logs dumped to console', 'success');
+                        } catch { /* ignore */ }
+                      }}
+                    >
+                      📋 Dump to Console
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => {
+                        try {
+                          (window as any).__AI_LOGS?.clear?.();
+                          showToast('Logs cleared', 'success');
+                        } catch { /* ignore */ }
+                      }}
+                    >
+                      🧹 Clear Logs
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
+              {/* Provider Config — collapsed card showing current state */}
               <div className="settings-section">
-                <h3>🛠 Provider Config</h3>
-                <p className="settings-hint">Current provider settings (API key masked):</p>
-                <pre className="debug-config-pre" style={{
-                  background: 'var(--bg-tertiary)',
-                  padding: 12,
-                  borderRadius: 6,
-                  fontSize: 12,
-                  fontFamily: 'var(--font-mono)',
-                  overflowX: 'auto',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-all',
-                }}>
-{JSON.stringify({
-  activeProvider,
-  baseUrl: localBaseUrl,
-  model: localModel,
-  apiKey: localKey ? localKey.slice(0, 8) + '...' + localKey.slice(-4) : '(empty)',
-  hasKey: !!localKey,
-}, null, 2)}</pre>
+                <h3>🛠 Connection Summary</h3>
+                <p className="settings-hint">
+                  A read-only snapshot of your current API connection settings.
+                </p>
+                <div className="debug-config-card">
+                  <div className="debug-config-row">
+                    <span className="debug-config-label">Provider</span>
+                    <span className="debug-config-value">{activeProvider}</span>
+                  </div>
+                  <div className="debug-config-row">
+                    <span className="debug-config-label">Model</span>
+                    <span className="debug-config-value">{localModel || <span style={{ color: 'var(--text-error)' }}>not set</span>}</span>
+                  </div>
+                  <div className="debug-config-row">
+                    <span className="debug-config-label">Base URL</span>
+                    <span className="debug-config-value debug-config-mono">{localBaseUrl}</span>
+                  </div>
+                  <div className="debug-config-row">
+                    <span className="debug-config-label">API Key</span>
+                    <span className="debug-config-value debug-config-mono">
+                      {localKey ? localKey.slice(0, 8) + '…' + localKey.slice(-4) : <span style={{ color: 'var(--text-muted)' }}>not set</span>}
+                    </span>
+                  </div>
+                </div>
               </div>
             </>
           )}
@@ -741,6 +807,22 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
               </div>
             </>
           )}
+        </div>
+
+        {/* ── Footer: OK / Cancel / Apply ── */}
+        <div className="settings-footer">
+          <div className="settings-footer-left">
+            {toast && (
+              <span className={`settings-toast settings-toast-${toast.type}`}>
+                {toast.type === 'success' ? '✓' : '⚠'} {toast.message}
+              </span>
+            )}
+          </div>
+          <div className="settings-footer-actions">
+            <button className="btn-primary" onClick={handleOk}>OK</button>
+            <button className="btn-secondary" onClick={handleApply}>Apply</button>
+            <button className="btn-secondary" onClick={handleCancel}>Cancel</button>
+          </div>
         </div>
       </div>
     </div>

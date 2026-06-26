@@ -34,7 +34,7 @@ interface UseAIReturn {
   clearError: () => void;
 }
 
-const MAX_TOOL_CYCLES = 5;
+const MAX_TOOL_CYCLES = 33;
 
 /** Execute a single tool call and return its result. */
 async function executeTool(toolCall: ToolCall): Promise<{
@@ -52,7 +52,7 @@ async function executeTool(toolCall: ToolCall): Promise<{
   try {
     if (name === 'execute_command') {
       const cmd = args.command as string;
-      const captureResult = await window.terminalAPI.executeAndCapture(cmd, 60000);
+      const captureResult = await window.terminalAPI.executeAndCapture(cmd);
       result = captureResult.output || '';
       result = result.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '').replace(/\u001b\][0-9;]*[a-zA-Z].*?(?:\u001b\\|\u0007)/g, '').replace(/[\u0000-\u001f]/g, '').trim();
       if (!result) result = '(command completed with no output)';

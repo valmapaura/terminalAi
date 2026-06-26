@@ -98,7 +98,7 @@ export class TerminalManager {
   }
 
   /** Execute a command on an EXISTING visible terminal and capture output */
-  async executeOnTerminal(id: string, command: string, timeoutMs: number = 30000): Promise<{ output: string; exitCode?: number }> {
+  async executeOnTerminal(id: string, command: string, timeoutMs: number = 5000): Promise<{ output: string; exitCode?: number }> {
     const term = this.terminals.get(id);
     if (!term) {
       // Fall back to hidden execution if no visible terminal
@@ -109,12 +109,16 @@ export class TerminalManager {
     return new Promise((resolve) => {
       let output = '';
       let timer: ReturnType<typeof setTimeout>;
-      let bufferSincePrompt = '';
       let resolved = false;
+      let startMarkerFound = false;
 
-      // Regex to detect command prompts at end of output
-      // Supports: $, >, #, %, :, C:\path>, PS C:\path>, λ, » and common prompt endings
-      const promptRegex = /[\\$>#%:>λ»] ?$/m;
+      // Use unique markers bracketing the command for reliable start/end detection.
+      // This avoids fragile prompt-regex matching (which false-matches on %, $, > in Windows output).
+      const uid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      const startMarker = `__CSTART_${uid}__`;
+      const endMarker = `__CEND_${uid}__`;
+      const startLine = `\r\n${startMarker}\r\n`;
+      const endLine = `\r\n${endMarker}\r\n`;
 
       // Shared cleanup: dispose listener + clear timer
       const cleanup = () => {
@@ -126,32 +130,40 @@ export class TerminalManager {
       const dataHandler = (data: string) => {
         if (resolved) return;
         output += data;
-        bufferSincePrompt += data;
 
-        // Keep only last 200 chars for prompt detection
-        if (bufferSincePrompt.length > 200) {
-          bufferSincePrompt = bufferSincePrompt.slice(-200);
+        // Look for start marker to begin capturing
+        if (!startMarkerFound) {
+          const si = output.indexOf(startMarker);
+          if (si !== -1) {
+            startMarkerFound = true;
+            // Keep only content after start marker
+            output = output.slice(si + startMarker.length);
+          }
+          return;
         }
 
-        // Detect prompt — the command is done when we see a prompt pattern
-        // at the end of a non-empty output
-        if (bufferSincePrompt.length > 10 && promptRegex.test(bufferSincePrompt.trim())) {
+        // Look for end marker to know command completed
+        const ei = output.indexOf(endMarker);
+        if (ei !== -1) {
+          const captured = output.slice(0, ei);
           cleanup();
-          resolve({ output });
+          resolve({ output: captured });
         }
       };
 
       // Use onData (node-pty's typed method) instead of on('data')
       const disp = term.onData(dataHandler);
 
-      // Send the command to the visible terminal
-      term.write(command + '\r');
+      // Send marker-then-command-then-marker sequence
+      term.write(startLine + command + endLine);
 
       // Safety timeout
       timer = setTimeout(() => {
         if (!resolved) {
           cleanup();
-          resolve({ output });
+          // Return whatever we captured (may be partial)
+          const captured = startMarkerFound ? output : '(no output captured before timeout)';
+          resolve({ output: captured });
         }
       }, timeoutMs);
     });
