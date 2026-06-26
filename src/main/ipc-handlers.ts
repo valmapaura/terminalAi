@@ -121,13 +121,19 @@ function encryptValue(value: string): string {
 function decryptValue(encrypted: string): string {
   if (!encrypted) return '';
   try {
+    let decrypted: string;
     if (safeStorage.isEncryptionAvailable()) {
       const buffer = Buffer.from(encrypted, 'base64');
-      return safeStorage.decryptString(buffer);
+      decrypted = safeStorage.decryptString(buffer);
+    } else {
+      decrypted = Buffer.from(encrypted, 'base64').toString('utf-8');
     }
-    // Fallback
-    return Buffer.from(encrypted, 'base64').toString('utf-8');
-  } catch {
+    const prefix = decrypted.slice(0, 12);
+    const suffix = decrypted.slice(-4);
+    console.log(`[AUTH] decryptValue: len=${decrypted.length}, prefix="${prefix}...", suffix="...${suffix}", printable=${/^[\x20-\x7E]+$/.test(decrypted)}, startsWithSk=${decrypted.startsWith('sk-')}`);
+    return decrypted;
+  } catch (err) {
+    console.error('[AUTH] decryptValue FAILED:', err);
     return '';
   }
 }
@@ -199,8 +205,10 @@ export function registerIpcHandlers(terminalManager: TerminalManager): void {
 
   ipcMain.handle('provider:get-config', (_, type: string) => {
     const data = config.providers?.[type];
+    const apiKey = data?.apiKeyEncrypted ? decryptValue(data.apiKeyEncrypted) : '';
+    console.log(`[AUTH] provider:get-config for "${type}": hasKey=${!!apiKey}, len=${apiKey.length}, startsWithSk=${apiKey.startsWith('sk-')}`);
     return {
-      apiKey: data?.apiKeyEncrypted ? decryptValue(data.apiKeyEncrypted) : '',
+      apiKey,
       baseUrl: data?.baseUrl || '',
       model: data?.model || '',
       label: data?.label || '',
@@ -209,8 +217,14 @@ export function registerIpcHandlers(terminalManager: TerminalManager): void {
 
   ipcMain.handle('provider:set-config', (_, { type, providerConfig }: { type: string; providerConfig: { apiKey?: string; baseUrl?: string; model?: string; label?: string } }) => {
     if (!config.providers) config.providers = {};
+    const trimmedKey = providerConfig.apiKey !== undefined ? providerConfig.apiKey.trim() : undefined;
+    if (trimmedKey !== undefined) {
+      console.log(`[AUTH] provider:set-config for "${type}": rawLen=${providerConfig.apiKey?.length}, trimmedLen=${trimmedKey.length}, startsWithSk=${trimmedKey.startsWith('sk-')}`);
+    } else {
+      console.log(`[AUTH] provider:set-config for "${type}": key NOT provided (keeping existing)`);
+    }
     config.providers[type] = {
-      apiKeyEncrypted: providerConfig.apiKey !== undefined ? encryptValue(providerConfig.apiKey) : config.providers[type]?.apiKeyEncrypted,
+      apiKeyEncrypted: trimmedKey !== undefined ? encryptValue(trimmedKey) : config.providers[type]?.apiKeyEncrypted,
       baseUrl: providerConfig.baseUrl !== undefined ? providerConfig.baseUrl : config.providers[type]?.baseUrl,
       model: providerConfig.model !== undefined ? providerConfig.model : config.providers[type]?.model,
       label: providerConfig.label !== undefined ? providerConfig.label : config.providers[type]?.label,
@@ -232,8 +246,10 @@ export function registerIpcHandlers(terminalManager: TerminalManager): void {
   ipcMain.handle('provider:get-all-configs', () => {
     const result: Record<string, { apiKey: string; baseUrl: string; model: string; label: string }> = {};
     for (const [type, data] of Object.entries(config.providers || {})) {
+      const apiKey = data.apiKeyEncrypted ? decryptValue(data.apiKeyEncrypted) : '';
+      console.log(`[AUTH] provider:get-all-configs for "${type}": hasKey=${!!apiKey}, len=${apiKey.length}, startsWithSk=${apiKey.startsWith('sk-')}`);
       result[type] = {
-        apiKey: data.apiKeyEncrypted ? decryptValue(data.apiKeyEncrypted) : '',
+        apiKey,
         baseUrl: data.baseUrl || '',
         model: data.model || '',
         label: data.label || '',
@@ -246,9 +262,10 @@ export function registerIpcHandlers(terminalManager: TerminalManager): void {
   ipcMain.handle('settings:set-api-key', (_, key: string) => {
     const type = config.activeProvider || 'deepseek';
     if (!config.providers) config.providers = {};
+    console.log(`[AUTH] settings:set-api-key for "${type}": rawLen=${key.length}, trimmedLen=${key.trim().length}, startsWithSk=${key.trim().startsWith('sk-')}`);
     config.providers[type] = {
       ...config.providers[type],
-      apiKeyEncrypted: encryptValue(key),
+      apiKeyEncrypted: encryptValue(key.trim()),
     };
     saveConfig(config);
     return true;
@@ -258,13 +275,17 @@ export function registerIpcHandlers(terminalManager: TerminalManager): void {
     const type = config.activeProvider || 'deepseek';
     const data = config.providers?.[type];
     if (!data?.apiKeyEncrypted) return null;
-    return decryptValue(data.apiKeyEncrypted) || null;
+    const key = decryptValue(data.apiKeyEncrypted);
+    console.log(`[AUTH] settings:get-api-key for "${type}": hasKey=${!!key}, len=${key.length}, startsWithSk=${key.startsWith('sk-')}`);
+    return key || null;
   });
 
   ipcMain.handle('settings:has-api-key', () => {
     const type = config.activeProvider || 'deepseek';
     const data = config.providers?.[type];
-    return !!data?.apiKeyEncrypted;
+    const hasIt = !!data?.apiKeyEncrypted;
+    console.log(`[AUTH] settings:has-api-key for "${type}": ${hasIt}`);
+    return hasIt;
   });
 
   // ─── App Settings (theme, fontSize, etc.) — persisted alongside provider config ───

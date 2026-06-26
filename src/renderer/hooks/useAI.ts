@@ -179,6 +179,9 @@ export function useAI(): UseAIReturn {
     await window.providerAPI.setActive(type);
     setActiveProviderState(type);
     const config = await window.providerAPI.getConfig(type);
+    const prefix = config.apiKey ? config.apiKey.slice(0, 12) : '(empty)';
+    const suffix = config.apiKey ? config.apiKey.slice(-4) : '';
+    logger.info('AUTH', `setActiveProvider got config: hasKey=${!!config.apiKey}, len=${config.apiKey?.length}, prefix="${prefix}...", startsWithSk=${config.apiKey?.startsWith('sk-')}`);
     providerConfigRef.current = {
       type,
       apiKey: config.apiKey || '',
@@ -195,6 +198,9 @@ export function useAI(): UseAIReturn {
         const active = await window.providerAPI.getActive() as AIProviderType;
         setActiveProviderState(active);
         const config = await window.providerAPI.getConfig(active);
+        const prefix = config.apiKey ? config.apiKey.slice(0, 12) : '(empty)';
+        const suffix = config.apiKey ? config.apiKey.slice(-4) : '';
+        logger.info('AUTH', `Init load provider "${active}": hasKey=${!!config.apiKey}, len=${config.apiKey?.length}, prefix="${prefix}...", startsWithSk=${config.apiKey?.startsWith('sk-')}`);
         providerConfigRef.current = {
           type: active,
           apiKey: config.apiKey || '',

@@ -100,8 +100,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
   };
 
   const saveCurrentProvider = async () => {
+    const trimmedKey = localKey.trim();
+    // Update local state to show trimmed key
+    if (trimmedKey !== localKey) setLocalKey(trimmedKey);
+    console.log(`[AUTH] SettingsPanel.saveCurrentProvider: provider=${activeProvider}, rawLen=${localKey.length}, trimmedLen=${trimmedKey.length}, startsWithSk=${trimmedKey.startsWith('sk-')}`);
     const config = {
-      apiKey: localKey,
+      apiKey: trimmedKey,
       baseUrl: localBaseUrl,
       model: localModel,
       label: activeProvider === 'custom' ? localLabel : undefined,
@@ -111,7 +115,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
       ...prev,
       [activeProvider]: {
         type: activeProvider,
-        apiKey: localKey,
+        apiKey: trimmedKey,
         baseUrl: localBaseUrl,
         model: localModel,
         label: activeProvider === 'custom' ? localLabel : undefined,

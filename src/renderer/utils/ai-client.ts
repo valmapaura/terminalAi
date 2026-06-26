@@ -497,14 +497,21 @@ async function streamOpenAICompatible(
 
   const maskedKey = apiKey ? apiKey.slice(0, 8) + '...' + apiKey.slice(-4) : '(empty)';
 
+  // ── Auth key debug ──
+  logger.info('AUTH', `streamOpenAICompatible: type=${type}, keyLen=${apiKey.length}, startsWithSk=${apiKey.startsWith('sk-')}, endsWithNewline=${apiKey.endsWith('\n')}, endsWithCR=${apiKey.endsWith('\r')}, endsWithSpace=${apiKey.endsWith(' ')}, printable=${/^[\x20-\x7E]+$/.test(apiKey)}, charCodes=[${apiKey.slice(0, 10).split('').map(c => c.charCodeAt(0)).join(',')}]`);
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
 
   if (type === 'azure') {
     headers['api-key'] = apiKey;
+    logger.info('AUTH', `Azure auth: api-key header set, len=${apiKey.length}`);
   } else {
     headers['Authorization'] = `Bearer ${apiKey}`;
+    const authHeaderPrefix = headers['Authorization'].slice(0, 25);
+    const authHeaderSuffix = headers['Authorization'].slice(-5);
+    logger.info('AUTH', `OpenAI auth: Authorization header="${authHeaderPrefix}...${authHeaderSuffix}", headerLen=${headers['Authorization'].length}`);
   }
 
   const apiMessages = [
