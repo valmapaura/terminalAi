@@ -29,6 +29,8 @@ export const App: React.FC = () => {
     approveAlwaysPending,
     skipPending,
     setAgentMode,
+    errorMessage,
+    clearError,
   } = useAI();
   const [settings, setSettings] = useState<AppSettings>({
     theme: 'dark',
@@ -228,6 +230,8 @@ export const App: React.FC = () => {
                   onApprove={approvePending}
                   onApproveAlways={approveAlwaysPending}
                   onSkip={skipPending}
+                  errorMessage={errorMessage}
+                  onClearError={clearError}
                 />
               }
             />
@@ -249,6 +253,8 @@ export const App: React.FC = () => {
               onApprove={approvePending}
               onApproveAlways={approveAlwaysPending}
               onSkip={skipPending}
+              errorMessage={errorMessage}
+              onClearError={clearError}
             />
           )}
         </div>

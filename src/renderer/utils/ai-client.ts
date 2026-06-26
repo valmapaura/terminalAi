@@ -216,6 +216,71 @@ Style:
 - Don't introduce yourself every time — just jump in.`;
 }
 
+// ── Context window management ──
+
+const CHARS_PER_TOKEN = 4;
+const DEFAULT_MAX_CONTEXT_TOKENS = 128000;
+
+/**
+ * Rough token estimate for a text string (~4 chars per token for English).
+ */
+export function estimateTokens(text: string): number {
+  return Math.ceil((text || '').length / CHARS_PER_TOKEN);
+}
+
+/**
+ * Estimate tokens used by a single message (content + metadata overhead).
+ */
+function estimateMessageTokens(msg: ChatMessage): number {
+  let total = estimateTokens(msg.content || '');
+  total += 4; // role + formatting overhead
+  if (msg.toolCallId) total += 3;
+  if (msg.toolName) total += 2;
+  if (msg.toolCalls) {
+    total += estimateTokens(JSON.stringify(msg.toolCalls));
+  }
+  return total;
+}
+
+/**
+ * Trim messages to fit within the model's context window.
+ * Removes oldest messages first, keeping as many recent messages as possible.
+ * Always keeps at least the last message.
+ *
+ * @param messages - Full message array
+ * @param systemPromptTokens - Token count of the system prompt (already accounted for)
+ * @param maxContextTokens - Total context window (default 128K for DeepSeek)
+ */
+export function trimMessagesForContextWindow(
+  messages: ChatMessage[],
+  systemPromptTokens: number,
+  maxContextTokens: number = DEFAULT_MAX_CONTEXT_TOKENS
+): ChatMessage[] {
+  const maxMsgTokens = maxContextTokens - systemPromptTokens;
+  if (maxMsgTokens <= 0 || messages.length <= 1) return messages;
+
+  // Work backwards from newest, collecting messages until we hit the budget
+  let totalTokens = 0;
+  const keep: ChatMessage[] = [];
+
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const tokens = estimateMessageTokens(messages[i]);
+    if (totalTokens + tokens <= maxMsgTokens) {
+      keep.unshift(messages[i]);
+      totalTokens += tokens;
+    } else {
+      break;
+    }
+  }
+
+  // Always keep at least the last message
+  if (keep.length === 0 && messages.length > 0) {
+    keep.push(messages[messages.length - 1]);
+  }
+
+  return keep;
+}
+
 /**
  * Convert our internal messages to OpenAI-compatible format.
  */

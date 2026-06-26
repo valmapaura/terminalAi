@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { ChatMessage, ToolCall, ProviderConfig, AIProviderType, SystemInfo, AgentMode } from '../types';
-import { AI_TOOLS, buildSystemPrompt, streamChatCompletion } from '../utils/ai-client';
+import { AI_TOOLS, buildSystemPrompt, streamChatCompletion, trimMessagesForContextWindow, estimateTokens } from '../utils/ai-client';
 import { getDefaultProviderConfig, AI_PROVIDERS } from '../types';
 import { logger } from '../utils/logger';
 
@@ -28,6 +28,10 @@ interface UseAIReturn {
   skipPending: () => void;
   /** Set agent mode */
   setAgentMode: (mode: AgentMode) => void;
+  /** User-friendly error message with optional detail (null = no error) */
+  errorMessage: { friendly: string; detail: string } | null;
+  /** Dismiss the current error */
+  clearError: () => void;
 }
 
 const MAX_TOOL_CYCLES = 5;
@@ -104,6 +108,7 @@ export function useAI(): UseAIReturn {
   const systemInfoRef = useRef<SystemInfo | null>(null);
   const [pendingToolCalls, setPendingToolCalls] = useState<ToolCall[] | null>(null);
   const [agentMode, setAgentModeState] = useState<AgentMode>('auto');
+  const [errorMessage, setErrorMessage] = useState<{ friendly: string; detail: string } | null>(null);
   const agentModeRef = useRef<AgentMode>('auto');
   const pendingResolverRef = useRef<((decision: 'approve' | 'always' | 'skip') => void) | null>(null);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
@@ -123,6 +128,10 @@ export function useAI(): UseAIReturn {
 
   const skipPending = useCallback(() => {
     pendingResolverRef.current?.('skip');
+  }, []);
+
+  const clearError = useCallback(() => {
+    setErrorMessage(null);
   }, []);
 
   const stopGeneration = useCallback(() => {
@@ -217,12 +226,15 @@ export function useAI(): UseAIReturn {
     const controller = new AbortController();
     abortControllerRef.current = controller;
     const systemPrompt = buildSystemPrompt(providerInfo?.label || provider.type, systemInfoRef.current || undefined);
+    const systemPromptTokens = estimateTokens(systemPrompt);
 
     let assistantContent = '';
     let assistantReasoning = '';
     let pendingToolCalls: ToolCall[] = [];
     let cycles = 0;
     let currentMsgs = allMsgs;
+    let apiErrorCount = 0;
+    const MAX_API_ERROR_RETRIES = 2;
 
     try {
       while (cycles < MAX_TOOL_CYCLES && !controller.signal.aborted) {
@@ -232,9 +244,18 @@ export function useAI(): UseAIReturn {
 
         logger.info('CYCLE', `── Cycle ${cycles + 1} ──`, { messageCount: currentMsgs.length });
 
+        // ── Trim messages to fit within 128K context window ──
+        const beforeTrim = currentMsgs.length;
+        currentMsgs = trimMessagesForContextWindow(currentMsgs, systemPromptTokens);
+        if (currentMsgs.length < beforeTrim) {
+          logger.info('CYCLE', `Trimmed ${beforeTrim - currentMsgs.length} oldest message(s) to stay within 128K context window`);
+        }
+
         // ── Call AI (streams tokens into UI) ──
-        const result = await streamChatCompletion(
-          provider, currentMsgs, AI_TOOLS, systemPrompt,
+        let result: { content: string; toolCalls: ToolCall[]; finishReason: string; reasoning?: string };
+        try {
+          result = await streamChatCompletion(
+            provider, currentMsgs, AI_TOOLS, systemPrompt,
           (deltaContent, deltaToolCalls, deltaReasoning) => {
             if (controller.signal.aborted) return;
             assistantContent = deltaContent;
@@ -256,8 +277,46 @@ export function useAI(): UseAIReturn {
               return filtered;
             });
           },
-          controller.signal
-        );
+            controller.signal
+          );
+        } catch (apiErr) {
+          const apiErrorMsg = apiErr instanceof Error ? apiErr.message : 'API call failed';
+          logger.warn('CYCLE', `API error on cycle ${cycles + 1}: ${apiErrorMsg.slice(0, 200)}`);
+
+          // Check if this is a recoverable error (tool_calls state issue, transient failure)
+          const isRecoverable =
+            apiErrorMsg.includes('tool_calls') ||
+            apiErrorMsg.includes('insufficient tool messages') ||
+            apiErrorMsg.includes('tool_call_id') ||
+            (apiErr instanceof TypeError && apiErrorMsg.includes('fetch')) ||
+            apiErrorMsg.includes('5' + '0' + '0') ||
+            apiErrorMsg.includes('5' + '0' + '2') ||
+            apiErrorMsg.includes('5' + '0' + '3') ||
+            apiErrorMsg.includes('5' + '0' + '4');
+
+          if (isRecoverable && apiErrorCount < MAX_API_ERROR_RETRIES) {
+            apiErrorCount++;
+            // Feed the error back to the LLM as a system feedback message so it can self-correct
+            const feedbackMsg: ChatMessage = {
+              id: `api-feedback-${Date.now()}`,
+              role: 'user',
+              content: `[System note: The API call returned an error. This was likely a transient state issue.
+Error: ${apiErrorMsg}
+
+Please review your previous response and try again. If you were making tool calls, the state may have been inconsistent — just respond naturally.]`,
+              timestamp: Date.now(),
+            };
+            currentMsgs = [...currentMsgs, feedbackMsg];
+            setMessages(currentMsgs);
+            messagesRef.current = currentMsgs;
+            logger.info('CYCLE', `↻ Injected API error feedback, retrying (attempt ${apiErrorCount}/${MAX_API_ERROR_RETRIES})...`);
+            cycles++;
+            continue;
+          }
+
+          // Non-recoverable: throw to outer handler
+          throw apiErr;
+        }
 
         if (controller.signal.aborted) break;
 
@@ -377,8 +436,13 @@ export function useAI(): UseAIReturn {
         });
       } else {
         const errorMsg = err instanceof Error ? err.message : 'Failed to get response';
+        const detail = err instanceof Error && err.stack ? err.stack.split('\n').slice(0, 4).join('\n') : errorMsg;
         logger.error('SEND', `Error: ${errorMsg}`, err instanceof Error ? { stack: err.stack } : err);
-        setMessages((prev) => [...prev, { id: `error-${Date.now()}`, role: 'assistant', content: `❌ Error: ${errorMsg}`, timestamp: Date.now() }]);
+        // Show user-friendly message with expandable details instead of raw error in chat
+        setErrorMessage({
+          friendly: 'The AI encountered an issue while processing your request. Please try again or check your API settings.',
+          detail: errorMsg,
+        });
       }
     } finally {
       setIsStreaming(false);
@@ -399,5 +463,6 @@ export function useAI(): UseAIReturn {
     hasApiKey, checkApiKey, activeProvider,
     providerLabel: providerInfo?.label || 'AI', setActiveProvider,
     pendingToolCalls, agentMode, approvePending, approveAlwaysPending, skipPending, setAgentMode,
+    errorMessage, clearError,
   };
 }

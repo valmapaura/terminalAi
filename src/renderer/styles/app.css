@@ -2377,6 +2377,88 @@ html, body, #root {
 }
 
 /* ============================================================
+   Error Banner — user-friendly error with expandable details
+   ============================================================ */
+.error-banner {
+  margin: 4px 12px 0;
+  border: 1px solid rgba(196, 43, 43, 0.3);
+  border-radius: 8px;
+  background: rgba(196, 43, 43, 0.08);
+  overflow: hidden;
+  animation: slideUp 0.15s ease-out;
+}
+
+.error-banner-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.error-banner-icon {
+  font-size: 14px;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
+.error-banner-text {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.error-banner-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.error-banner-dismiss:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.error-banner-toggle {
+  background: none;
+  border: none;
+  border-top: 1px solid rgba(196, 43, 43, 0.15);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  padding: 6px 12px;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-primary);
+  transition: color 0.1s;
+}
+
+.error-banner-toggle:hover {
+  color: var(--text-secondary);
+}
+
+.error-banner-detail {
+  margin: 0;
+  padding: 8px 12px;
+  border-top: 1px solid rgba(196, 43, 43, 0.15);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-error);
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.5;
+  background: rgba(0, 0, 0, 0.15);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* ============================================================
    Agent Mode Settings — radio card style
    ============================================================ */
 .agent-mode-options {

@@ -19,15 +19,15 @@ interface ChatPaneProps {
   agentMode: AgentMode;
   onApprove: () => void;
   onApproveAlways: () => void;
-  onSkip: () => void;
-}
+  onSkip: () => void;  errorMessage?: { friendly: string; detail: string } | null;
+  onClearError?: () => void;}
 
 /** Generate a deterministic session ID from the first user message */
 function makeSessionId(): string {
   return `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, isStreaming, onOpenSettings, onClear, onStop, messages: apiMessages, onSendMessage: sendMessage, onClearMessages: clearMessages, onLoadMessages: loadMessages, providerLabel, pendingToolCalls, agentMode, onApprove, onApproveAlways, onSkip }) => {
+export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, isStreaming, onOpenSettings, onClear, onStop, messages: apiMessages, onSendMessage: sendMessage, onClearMessages: clearMessages, onLoadMessages: loadMessages, providerLabel, pendingToolCalls, agentMode, onApprove, onApproveAlways, onSkip, errorMessage, onClearError }) => {
   const [input, setInput] = useState('');
   const [injectedCode, setInjectedCode] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -445,6 +445,33 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
     );
   };
 
+  // ─── Error Banner — user-friendly error with expandable technical details ───
+  const ErrorBanner: React.FC<{
+    friendly: string;
+    detail: string;
+    onDismiss: () => void;
+  }> = ({ friendly, detail, onDismiss }) => {
+    const [showDetail, setShowDetail] = useState(false);
+    return (
+      <div className="error-banner">
+        <div className="error-banner-header">
+          <span className="error-banner-icon">⚠️</span>
+          <span className="error-banner-text">{friendly}</span>
+          <button className="error-banner-dismiss" onClick={onDismiss} title="Dismiss">✕</button>
+        </div>
+        <button
+          className="error-banner-toggle"
+          onClick={() => setShowDetail(!showDetail)}
+        >
+          {showDetail ? 'Hide details' : 'Show details'} {showDetail ? '▲' : '▼'}
+        </button>
+        {showDetail && (
+          <pre className="error-banner-detail">{detail}</pre>
+        )}
+      </div>
+    );
+  };
+
   // ─── Tool name display — like VS Code Copilot's invocationMessage / pastTenseMessage ───
   const getToolLabel = (name: string): string => {
     switch (name) {
@@ -709,6 +736,15 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
           {agentMode === 'interactive' ? '🔍 Interactive' : '🤖 Auto'}
         </span>
       </div>
+
+      {/* ─── Error Banner — user-friendly with expandable details ─── */}
+      {errorMessage && (
+        <ErrorBanner
+          friendly={errorMessage.friendly}
+          detail={errorMessage.detail}
+          onDismiss={() => onClearError?.()}
+        />
+      )}
 
       {/* ─── Tool Confirmation Card ─── */}
       <ToolConfirmationCard />
