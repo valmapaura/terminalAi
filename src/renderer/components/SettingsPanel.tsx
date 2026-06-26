@@ -30,13 +30,37 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [newModelName, setNewModelName] = useState('');
   const [showAddModel, setShowAddModel] = useState(false);
-  // Snapshot for Cancel
+  // Snapshot for Cancel — captures ALL settings, not just API
   const snapshotRef = useRef<Record<string, unknown>>({});
+  // Refs for keyboard handler to avoid stale closures
+  const handleOkRef = useRef<() => void>(() => {});
+  const handleCancelRef = useRef<() => void>(() => {});
+
+  // Staged appearance + agent settings (applied only on OK/Apply)
+  const [stagedTheme, setStagedTheme] = useState(settings.theme);
+  const [stagedFontSize, setStagedFontSize] = useState(settings.fontSize);
+  const [stagedSplitDirection, setStagedSplitDirection] = useState(settings.splitDirection);
+  const [stagedShowTerminal, setStagedShowTerminal] = useState(settings.showTerminal);
+  const [stagedAgentMode, setStagedAgentMode] = useState(settings.agentMode);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
+
+  // Keyboard shortcuts: Escape → Cancel, Ctrl+Enter → OK
+  // Uses refs to always call the latest handler without re-registering the listener
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !e.repeat) {
+        handleCancelRef.current();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        handleOkRef.current();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // Load all provider configs and models on mount
   useEffect(() => {
@@ -69,7 +93,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
         setIsCustomModel(isCustom);
         setLocalLabel(current.label || '');
 
-        // Snapshot for Cancel
+        // Snapshot for Cancel — captures ALL settings
         snapshotRef.current = {
           activeProvider: active,
           localKey: current.apiKey || '',
@@ -77,6 +101,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
           localModel: model,
           isCustomModel: isCustom,
           localLabel: current.label || '',
+          theme: settings.theme,
+          fontSize: settings.fontSize,
+          splitDirection: settings.splitDirection,
+          showTerminal: settings.showTerminal,
+          agentMode: settings.agentMode,
         };
 
         // Load model entries
@@ -148,9 +177,31 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
     return null;
   };
 
+  // Whether there are unsaved changes across any tab
+  const hasChanges =
+    localKey.trim() !== ((snapshotRef.current.localKey as string) ?? '') ||
+    localBaseUrl !== (snapshotRef.current.localBaseUrl as string) ||
+    localModel !== (snapshotRef.current.localModel as string) ||
+    stagedTheme !== settings.theme ||
+    stagedFontSize !== settings.fontSize ||
+    stagedSplitDirection !== settings.splitDirection ||
+    stagedShowTerminal !== settings.showTerminal ||
+    stagedAgentMode !== settings.agentMode;
+
   const saveAll = async () => {
     await saveCurrentProvider();
-    onUpdate({ activeProvider });
+    // Apply staged appearance + agent settings
+    onUpdate({
+      activeProvider,
+      theme: stagedTheme,
+      fontSize: stagedFontSize,
+      splitDirection: stagedSplitDirection,
+      showTerminal: stagedShowTerminal,
+      agentMode: stagedAgentMode,
+    });
+    if (stagedAgentMode !== settings.agentMode) {
+      onAgentModeChange?.(stagedAgentMode);
+    }
 
     // Update snapshot so Cancel after Apply is safe
     snapshotRef.current = {
@@ -160,6 +211,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
       localModel,
       isCustomModel,
       localLabel,
+      theme: stagedTheme,
+      fontSize: stagedFontSize,
+      splitDirection: stagedSplitDirection,
+      showTerminal: stagedShowTerminal,
+      agentMode: stagedAgentMode,
     };
   };
 
@@ -171,6 +227,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
     onClose();
   };
 
+  handleOkRef.current = handleOk;
+
   // ── Apply: validate, save all, toast ──
   const handleApply = async () => {
     const err = validate();
@@ -179,7 +237,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
     showToast('Settings applied successfully', 'success');
   };
 
-  // ── Cancel: restore snapshot, close ──
+  // ── Cancel: restore ALL settings, close ──
   const handleCancel = () => {
     const snap = snapshotRef.current as Record<string, unknown>;
     if (snap.activeProvider && snap.activeProvider !== activeProvider) {
@@ -190,8 +248,15 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
     setLocalModel((snap.localModel as string) || '');
     setIsCustomModel(snap.isCustomModel === true);
     setLocalLabel((snap.localLabel as string) || '');
+    // Revert staged appearance + agent
+    setStagedTheme((snap.theme as typeof settings.theme) || settings.theme);
+    setStagedFontSize((snap.fontSize as number) || settings.fontSize);
+    setStagedSplitDirection((snap.splitDirection as 'horizontal' | 'vertical') || settings.splitDirection);
+    setStagedShowTerminal((snap.showTerminal as boolean) ?? settings.showTerminal);
+    setStagedAgentMode((snap.agentMode as 'auto' | 'interactive') || settings.agentMode);
     onClose();
   };
+  handleCancelRef.current = handleCancel;
 
   const handleTest = async () => {
     setTesting(true);
@@ -317,7 +382,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
             className={`settings-tab ${activeTab === 'debug' ? 'active' : ''}`}
             onClick={() => setActiveTab('debug')}
           >
-            � Diagnostics
+            🛠 Diagnostics
           </button>
           <button
             className={`settings-tab ${activeTab === 'agent' ? 'active' : ''}`}
@@ -547,10 +612,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
                   </button>
                   {testResult === 'success' && <span className="test-pass">✓ Connected</span>}
                   {testResult === 'fail' && <span className="test-fail">✗ Connection failed</span>}
-                  <button className="btn-secondary" onClick={handleClear} disabled={!localKey}>
-                    Clear Key
-                  </button>
                 </div>
+              </div>
+
+              {/* API Key Management */}
+              <div className="settings-section">
+                <h3>API Key</h3>
+                <p className="settings-hint">Clear your stored API key for this provider.</p>
+                <button className="btn-secondary" onClick={handleClear} disabled={!localKey}>
+                  🗑 Clear API Key
+                </button>
               </div>
             </>
           )}
@@ -563,8 +634,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
                 <label className="setting-row">
                   <span>Color scheme</span>
                   <select
-                    value={settings.theme}
-                    onChange={(e) => onUpdate({ theme: e.target.value as typeof settings.theme })}
+                    value={stagedTheme}
+                    onChange={(e) => setStagedTheme(e.target.value as typeof settings.theme)}
                     className="select-input"
                   >
                     <option value="dark">Dark Modern (VS Code)</option>
@@ -584,8 +655,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
                     type="number"
                     min={10}
                     max={24}
-                    value={settings.fontSize}
-                    onChange={(e) => onUpdate({ fontSize: parseInt(e.target.value) })}
+                    value={stagedFontSize}
+                    onChange={(e) => setStagedFontSize(parseInt(e.target.value))}
                     className="text-input"
                     style={{ width: 80 }}
                   />
@@ -598,9 +669,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
                 <label className="setting-row">
                   <span>Split Direction</span>
                   <select
-                    value={settings.splitDirection}
+                    value={stagedSplitDirection}
                     onChange={(e) =>
-                      onUpdate({ splitDirection: e.target.value as 'horizontal' | 'vertical' })
+                      setStagedSplitDirection(e.target.value as 'horizontal' | 'vertical')
                     }
                     className="select-input"
                   >
@@ -617,8 +688,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
                   <span>Show terminal pane</span>
                   <input
                     type="checkbox"
-                    checked={settings.showTerminal}
-                    onChange={(e) => onUpdate({ showTerminal: e.target.checked })}
+                    checked={stagedShowTerminal}
+                    onChange={(e) => setStagedShowTerminal(e.target.checked)}
                     className="checkbox-input"
                   />
                 </label>
@@ -628,7 +699,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
                 </p>
               </div>
 
-              {/* Clear Chat */}
+              {/* Clear Chat — immediate action (no staging needed) */}
               <div className="settings-section">
                 <h3>Chat</h3>
                 <div className="setting-row">
@@ -759,32 +830,26 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
                   for your approval before each tool execution.
                 </p>
                 <div className="agent-mode-options">
-                  <label className={`agent-mode-option${settings.agentMode === 'auto' ? ' selected' : ''}`}>
+                  <label className={`agent-mode-option${stagedAgentMode === 'auto' ? ' selected' : ''}`}>
                     <input
                       type="radio"
                       name="agentMode"
                       value="auto"
-                      checked={settings.agentMode === 'auto'}
-                      onChange={() => {
-                        onUpdate({ agentMode: 'auto' });
-                        onAgentModeChange?.('auto');
-                      }}
+                      checked={stagedAgentMode === 'auto'}
+                      onChange={() => setStagedAgentMode('auto')}
                     />
                     <div className="agent-mode-option-content">
                       <span className="agent-mode-option-title">🤖 Auto</span>
                       <span className="agent-mode-option-desc">Execute commands automatically — no confirmation needed</span>
                     </div>
                   </label>
-                  <label className={`agent-mode-option${settings.agentMode === 'interactive' ? ' selected' : ''}`}>
+                  <label className={`agent-mode-option${stagedAgentMode === 'interactive' ? ' selected' : ''}`}>
                     <input
                       type="radio"
                       name="agentMode"
                       value="interactive"
-                      checked={settings.agentMode === 'interactive'}
-                      onChange={() => {
-                        onUpdate({ agentMode: 'interactive' });
-                        onAgentModeChange?.('interactive');
-                      }}
+                      checked={stagedAgentMode === 'interactive'}
+                      onChange={() => setStagedAgentMode('interactive')}
                     />
                     <div className="agent-mode-option-content">
                       <span className="agent-mode-option-title">🔍 Interactive</span>
@@ -817,11 +882,14 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
                 {toast.type === 'success' ? '✓' : '⚠'} {toast.message}
               </span>
             )}
+            {!toast && hasChanges && (
+              <span className="settings-dirty-badge">● Unsaved changes</span>
+            )}
           </div>
           <div className="settings-footer-actions">
-            <button className="btn-primary" onClick={handleOk}>OK</button>
-            <button className="btn-secondary" onClick={handleApply}>Apply</button>
-            <button className="btn-secondary" onClick={handleCancel}>Cancel</button>
+            <button className="btn-primary" onClick={handleOk} title="Save &amp; close (Ctrl+Enter)">OK</button>
+            <button className="btn-secondary" onClick={handleApply} title="Save without closing">Apply</button>
+            <button className="btn-secondary" onClick={handleCancel} title="Discard changes (Escape)">Cancel</button>
           </div>
         </div>
       </div>

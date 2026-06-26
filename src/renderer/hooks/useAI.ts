@@ -52,7 +52,18 @@ async function executeTool(toolCall: ToolCall): Promise<{
   try {
     if (name === 'execute_command') {
       const cmd = args.command as string;
-      const captureResult = await window.terminalAPI.executeAndCapture(cmd);
+      const TIMEOUT_MS = 20000;
+      let captureResult: { output?: string; error?: string };
+      try {
+        captureResult = await Promise.race([
+          window.terminalAPI.executeAndCapture(cmd),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error(`Command timed out after ${TIMEOUT_MS / 1000}s`)), TIMEOUT_MS)
+          ),
+        ]);
+      } catch (err) {
+        captureResult = { output: `(command timed out after ${TIMEOUT_MS / 1000}s - partial output may be available)` };
+      }
       result = captureResult.output || '';
       result = result.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '').replace(/\u001b\][0-9;]*[a-zA-Z].*?(?:\u001b\\|\u0007)/g, '').replace(/[\u0000-\u001f]/g, '').trim();
       if (!result) result = '(command completed with no output)';
@@ -404,21 +415,23 @@ Please review your previous response and try again. If you were making tool call
               displayContent: '```\n(Skipped — user chose not to run this)\n```',
               hadError: false,
             }));
+            const skipToolResultMsgs = skipResults.map(tr => ({
+              id: `tool-${tr.toolCallId}`,
+              role: 'tool' as const,
+              content: tr.displayContent,
+              timestamp: Date.now(),
+              toolCallId: tr.toolCallId,
+              toolName: tr.name,
+              toolStatus: 'completed' as const,
+            }));
             setMessages((prev) => {
-              const toolResultMsgs = skipResults.map(tr => ({
-                id: `tool-${tr.toolCallId}`,
-                role: 'tool' as const,
-                content: tr.displayContent,
-                timestamp: Date.now(),
-                toolCallId: tr.toolCallId,
-                toolName: tr.name,
-                toolStatus: 'completed' as const,
-              }));
-              const updated = [...prev, ...toolResultMsgs];
+              const updated = [...prev, ...skipToolResultMsgs];
               messagesRef.current = updated;
               return updated;
             });
-            currentMsgs = [...messagesRef.current];
+            // React functional updaters are deferred — ref not yet updated.
+            // Build currentMsgs directly from last known ref + new messages.
+            currentMsgs = [...messagesRef.current, ...skipToolResultMsgs];
             cycles++;
             continue;
           }
@@ -437,23 +450,25 @@ Please review your previous response and try again. If you were making tool call
         logger.info('TOOL', `← Tools completed`);
 
         // Add tool result messages + sync ref synchronously (no effect timing dependency)
+        const toolResultMsgs = toolResults.map((tr) => ({
+          id: `tool-${tr.toolCallId}`,
+          role: 'tool' as const,
+          content: tr.displayContent,
+          timestamp: Date.now(),
+          toolCallId: tr.toolCallId,
+          toolName: tr.name,
+          toolStatus: tr.hadError ? ('error' as const) : ('completed' as const),
+        }));
         setMessages((prev) => {
-          const toolResultMsgs = toolResults.map((tr) => ({
-            id: `tool-${tr.toolCallId}`,
-            role: 'tool' as const,
-            content: tr.displayContent,
-            timestamp: Date.now(),
-            toolCallId: tr.toolCallId,
-            toolName: tr.name,
-            toolStatus: tr.hadError ? ('error' as const) : ('completed' as const),
-          }));
           const updated = [...prev, ...toolResultMsgs];
           messagesRef.current = updated;
           return updated;
         });
 
-        // Ref is already synced — grab it immediately for next cycle
-        currentMsgs = [...messagesRef.current];
+        // React functional updaters are deferred — the ref update inside
+        // setMessages hasn't been applied yet. Build currentMsgs directly
+        // from the most recent ref value + the new tool results.
+        currentMsgs = [...messagesRef.current, ...toolResultMsgs];
         cycles++;
       }
 

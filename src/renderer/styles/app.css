@@ -1648,6 +1648,16 @@ html, body, #root {
   animation: toastIn 0.25s ease-out;
 }
 
+.settings-dirty-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--accent-yellow);
+  font-weight: 500;
+  animation: toastIn 0.2s ease-out;
+}
+
 .settings-toast-success {
   background: rgba(106, 153, 85, 0.15);
   color: var(--text-success);
