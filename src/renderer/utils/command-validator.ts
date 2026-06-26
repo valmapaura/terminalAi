@@ -65,8 +65,9 @@ export function validateCommand(command: string): ValidationResult {
  * Sanitize a command before injection — trims whitespace and normalizes line endings.
  */
 export function sanitizeCommand(command: string): string {
+  // Only strip ASCII control characters (NUL, BEL, etc.) — preserve Unicode
   return command
     .trim()
     .replace(/\r?\n/g, '\r\n')
-    .replace(/[^\x20-\x7E\r\n]/g, '');
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
 }

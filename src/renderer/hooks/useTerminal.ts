@@ -51,29 +51,38 @@ export function useTerminal() {
     }
   }, []);
 
-  /** Load settings from secure storage */
+  /** Load settings from persistent storage */
   const loadSettings = useCallback(async (): Promise<AppSettings | null> => {
     try {
+      const stored = await window.appSettingsAPI.load();
       return {
-        theme: 'dark',
-        fontSize: 14,
-        splitDirection: 'horizontal',
-
+        theme: (['dark', 'light', 'solarized-dark', 'solarized-light'].includes(stored.theme) ? stored.theme : 'dark') as 'dark' | 'light' | 'solarized-dark' | 'solarized-light',
+        fontSize: stored.fontSize || 14,
+        splitDirection: (stored.splitDirection as 'horizontal' | 'vertical') || 'horizontal',
         activeProvider: 'deepseek',
         providers: {},
-        showTerminal: true,
-        agentMode: 'auto',
+        showTerminal: stored.showTerminal !== false,
+        agentMode: (stored.agentMode as 'auto' | 'interactive') || 'auto',
       };
-    } catch {
+    } catch (e) {
+      console.warn('[useTerminal] Failed to load settings:', e);
       return null;
     }
   }, []);
 
-  /** Save settings to secure storage */
+  /** Save settings to persistent storage */
   const saveSettings = useCallback(async (settings: AppSettings): Promise<void> => {
     if (settings.activeProvider) {
       await window.providerAPI.setActive(settings.activeProvider);
     }
+    // Persist UI settings (theme, fontSize, etc.) to disk
+    await window.appSettingsAPI.save({
+      theme: settings.theme,
+      fontSize: settings.fontSize,
+      splitDirection: settings.splitDirection,
+      showTerminal: settings.showTerminal,
+      agentMode: settings.agentMode,
+    });
   }, []);
 
   // Auto-create terminal on mount, kill on unmount

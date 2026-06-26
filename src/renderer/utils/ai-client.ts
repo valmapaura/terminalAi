@@ -833,7 +833,7 @@ async function streamGoogle(
     }],
   }));
 
-  const url = `${baseUrl}/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
+  const url = `${baseUrl}/models/${model}:streamGenerateContent?alt=sse`;
 
   logger.info('GEMINI', `→ POST ${url}`, {
     model,
@@ -844,7 +844,7 @@ async function streamGoogle(
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': apiKey },
     body: JSON.stringify({
       contents: geminiContents,
       systemInstruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,

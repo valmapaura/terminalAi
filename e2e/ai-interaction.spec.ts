@@ -1,13 +1,18 @@
 import { test, expect } from '@playwright/test';
 import { launchApp, sendMessage, setApiKey, waitForAssistantSuccess } from './helpers';
 
-// The test API key for DeepSeek.
-// Override via TEST_DEEPSEEK_API_KEY environment variable if desired.
-const DEEPSEEK_API_KEY = process.env.TEST_DEEPSEEK_API_KEY || 'sk-15983c3134e24d2fbe5a10a1d0ac630f';
+// The test API key for DeepSeek — MUST be set via environment variable.
+const DEEPSEEK_API_KEY = process.env.TEST_DEEPSEEK_API_KEY;
+if (!DEEPSEEK_API_KEY) {
+  throw new Error(
+    'TEST_DEEPSEEK_API_KEY environment variable is required. ' +
+    'Set it to your DeepSeek API key before running AI interaction tests.'
+  );
+}
 
 test.describe('OS Assistant — AI interaction', () => {
   test('executes a command when asked explicitly', async () => {
-    test.setTimeout(120_000);
+    test.setTimeout(60_000);
 
     const { app, page } = await launchApp();
 
@@ -18,7 +23,7 @@ test.describe('OS Assistant — AI interaction', () => {
     await sendMessage(page, 'Run the command "ping google.com -n 2" and show me the results');
 
     // 3. Wait for the assistant to finish responding
-    const response = await waitForAssistantSuccess(page, 90_000);
+    const response = await waitForAssistantSuccess(page, 45_000);
 
     console.log('=== COMMAND TEST RESPONSE ===');
     console.log(response);
@@ -32,7 +37,7 @@ test.describe('OS Assistant — AI interaction', () => {
   });
 
   test('responds to a list directory request', async () => {
-    test.setTimeout(120_000);
+    test.setTimeout(60_000);
 
     const { app, page } = await launchApp();
 
@@ -43,7 +48,7 @@ test.describe('OS Assistant — AI interaction', () => {
     await sendMessage(page, 'list files in current directory');
 
     // 3. Wait for the AI to respond
-    const response = await waitForAssistantSuccess(page, 90_000);
+    const response = await waitForAssistantSuccess(page, 45_000);
 
     console.log('AI response length:', response.length);
 

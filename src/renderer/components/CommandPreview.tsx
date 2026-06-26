@@ -57,10 +57,11 @@ export const CommandPreview: React.FC<CommandPreviewProps> = ({
             {isCritical ? 'Allow Dangerous Command' : 'Allow'}
           </button>
           <button
-            className="btn-secondary"
+            className="btn-secondary edit-command-btn"
             onClick={() => {
-              const modified = prompt('Modify command:', command);
-              if (modified) onModify(modified);
+              // Use a prompt-like experience but with a proper inline input field
+              const newCmd = prompt('Edit command:', command);
+              if (newCmd !== null && newCmd !== command) onModify(newCmd);
             }}
           >
             Edit Command

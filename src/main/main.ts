@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, globalShortcut } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import * as path from 'path';
 import { TerminalManager } from './terminal';
 import { registerIpcHandlers } from './ipc-handlers';
@@ -42,9 +42,14 @@ app.whenReady().then(() => {
 
   createWindow();
 
-  // Register DevTools shortcuts
-  globalShortcut.register('F12', toggleDevTools);
-  globalShortcut.register('CommandOrControl+Shift+I', toggleDevTools);
+  // DevTools via window-level shortcuts (only when app is focused)
+  if (mainWindow) {
+    mainWindow.webContents.on('before-input-event', (_e, input) => {
+      if (input.key === 'F12' || (input.key === 'I' && input.control && input.shift)) {
+        toggleDevTools();
+      }
+    });
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -54,7 +59,7 @@ app.whenReady().then(() => {
 });
 
 app.on('will-quit', () => {
-  globalShortcut.unregisterAll();
+  // No global shortcuts to unregister — using window-level shortcuts now
 });
 
 app.on('window-all-closed', () => {

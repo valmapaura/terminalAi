@@ -56,8 +56,27 @@ export interface SystemAPI {
   }>;
 }
 
+export interface AppSettingsAPI {
+  load(): Promise<{
+    theme: string;
+    fontSize: number;
+    splitDirection: string;
+    showTerminal: boolean;
+    agentMode: string;
+  }>;
+  save(settings: Record<string, unknown>): Promise<boolean>;
+}
+
 export interface AIToolsAPI {
   executeCommand(command: string): Promise<string>;
+  /** Read a file using Node.js fs (safe, no shell) */
+  readFile(filePath: string): Promise<{ success: boolean; content: string; error: string }>;
+  /** List a directory using Node.js fs (safe, no shell) */
+  listDirectory(dirPath: string): Promise<{
+    success: boolean;
+    entries: Array<{ name: string; isDirectory: boolean; size: number }>;
+    error: string;
+  }>;
 }
 
 export interface MemoryAPI {
@@ -118,7 +137,10 @@ contextBridge.exposeInMainWorld('terminalAPI', {
   removeDataListener: () => {
     ipcRenderer.removeAllListeners('terminal-data');
   },
-  readBuffer: (lineCount?: number) => ipcRenderer.invoke('terminal:read-buffer', { lineCount }),
+  readBuffer: (lineCount?: number) => {
+    // Pass all terminal IDs and let the handler find the right buffer
+    return ipcRenderer.invoke('terminal:read-buffer', { lineCount });
+  },
   injectCommand: (command: string) => ipcRenderer.invoke('terminal:inject', { command }),
   executeAndCapture: (command: string, timeout?: number) => ipcRenderer.invoke('terminal:execute-and-capture', { command, timeout }),
 } satisfies TerminalAPI);
@@ -145,6 +167,8 @@ contextBridge.exposeInMainWorld('appAPI', {
 
 contextBridge.exposeInMainWorld('aiToolsAPI', {
   executeCommand: (command: string) => ipcRenderer.invoke('ai:execute-command', { command }),
+  readFile: (filePath: string) => ipcRenderer.invoke('ai:read-file', { filePath }),
+  listDirectory: (dirPath: string) => ipcRenderer.invoke('ai:list-directory', { dirPath }),
 } satisfies AIToolsAPI);
 
 contextBridge.exposeInMainWorld('memoryAPI', {
@@ -182,6 +206,11 @@ contextBridge.exposeInMainWorld('windowControlsAPI', {
 contextBridge.exposeInMainWorld('systemAPI', {
   getInfo: () => ipcRenderer.invoke('system:get-info'),
 } satisfies SystemAPI);
+
+contextBridge.exposeInMainWorld('appSettingsAPI', {
+  load: () => ipcRenderer.invoke('settings:load'),
+  save: (settings: Record<string, unknown>) => ipcRenderer.invoke('settings:save', { settings }),
+} satisfies AppSettingsAPI);
 
 contextBridge.exposeInMainWorld('chatAPI', {
   listSessions: () => ipcRenderer.invoke('chat:list-sessions'),

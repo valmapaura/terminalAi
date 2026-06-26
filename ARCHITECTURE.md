@@ -479,7 +479,7 @@ npm run test:e2e:headed
 npm run test:e2e:debug
 ```
 
-The e2e tests require a valid API key. By default they use the DeepSeek key embedded in the test file — override with `TEST_DEEPSEEK_API_KEY` environment variable.
+The e2e tests require a valid API key. You **must** set the `TEST_DEEPSEEK_API_KEY` environment variable before running AI interaction tests.
 
 ---
 

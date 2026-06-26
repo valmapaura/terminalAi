@@ -40,17 +40,24 @@ function loadModels(): ModelsFile {
     if (fs.existsSync(p)) {
       return JSON.parse(fs.readFileSync(p, 'utf-8'));
     }
-  } catch { /* ignore */ }
+  } catch (e) {
+    console.error('[MODELS] Failed to load models file, resetting:', e);
+  }
   return { models: [], selectedModels: {} };
 }
 
 function saveModels(data: ModelsFile): void {
+  const p = getModelsPath();
+  const tmpPath = p + '.tmp';
   try {
-    const p = getModelsPath();
     const dir = path.dirname(p);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(p, JSON.stringify(data, null, 2), 'utf-8');
-  } catch { /* ignore */ }
+    fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
+    fs.renameSync(tmpPath, p);
+  } catch (e) {
+    console.error('[MODELS] Failed to save models file:', e);
+    try { if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+  }
 }
 
 interface StoredProviderData {
@@ -72,22 +79,25 @@ function loadConfig(): StoredConfig {
     if (fs.existsSync(configPath)) {
       return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
     }
-  } catch {
-    // Ignore corrupt config
+  } catch (e) {
+    console.error('[CONFIG] Failed to load config file, resetting to defaults:', e);
   }
   return {};
 }
 
 function saveConfig(config: StoredConfig): void {
+  const configPath = getConfigPath();
+  const tmpPath = configPath + '.tmp';
   try {
-    const configPath = getConfigPath();
     const dir = path.dirname(configPath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
-  } catch {
-    // Silently fail — config is non-critical
+    fs.writeFileSync(tmpPath, JSON.stringify(config, null, 2), 'utf-8');
+    fs.renameSync(tmpPath, configPath);
+  } catch (e) {
+    console.error('[CONFIG] Failed to save config file:', e);
+    try { if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath); } catch { /* ignore */ }
   }
 }
 
@@ -234,12 +244,76 @@ export function registerIpcHandlers(terminalManager: TerminalManager): void {
     return !!data?.apiKeyEncrypted;
   });
 
+  // ─── App Settings (theme, fontSize, etc.) — persisted alongside provider config ───
+  ipcMain.handle('settings:load', () => {
+    const cfg = loadConfig();
+    return {
+      theme: (cfg as Record<string, unknown>).theme || 'dark',
+      fontSize: (cfg as Record<string, unknown>).fontSize || 14,
+      splitDirection: (cfg as Record<string, unknown>).splitDirection || 'horizontal',
+      showTerminal: (cfg as Record<string, unknown>).showTerminal !== false,
+      agentMode: (cfg as Record<string, unknown>).agentMode || 'auto',
+    };
+  });
+
+  ipcMain.handle('settings:save', (_, { settings }: { settings: Record<string, unknown> }) => {
+    const cfg = loadConfig();
+    Object.assign(cfg, settings);
+    saveConfig(cfg);
+    return true;
+  });
+
   // Terminal read — get last N lines for AI context
   ipcMain.handle('terminal:read-buffer', (_, { id, lineCount }: { id?: string; lineCount?: number }) => {
     return terminalManager.getBuffer(id, lineCount);
   });
 
   // AI tool execution — run a command silently and return output
+  // Safe file read — uses Node.js fs, no shell
+  ipcMain.handle('ai:read-file', (_, { filePath }: { filePath: string }) => {
+    try {
+      // Prevent path traversal
+      const resolved = path.resolve(filePath);
+      if (!fs.existsSync(resolved)) {
+        return { success: false, error: 'File not found', content: '' };
+      }
+      const stat = fs.statSync(resolved);
+      if (!stat.isFile()) {
+        return { success: false, error: 'Path is not a file', content: '' };
+      }
+      // Limit to 1MB to prevent memory issues
+      if (stat.size > 1_048_576) {
+        return { success: false, error: 'File too large (max 1MB)', content: '' };
+      }
+      const content = fs.readFileSync(resolved, 'utf-8');
+      return { success: true, content, error: '' };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'Failed to read file', content: '' };
+    }
+  });
+
+  // Safe directory listing — uses Node.js fs, no shell
+  ipcMain.handle('ai:list-directory', (_, { dirPath }: { dirPath: string }) => {
+    try {
+      const resolved = path.resolve(dirPath);
+      if (!fs.existsSync(resolved)) {
+        return { success: false, error: 'Path not found', entries: [] };
+      }
+      const stat = fs.statSync(resolved);
+      if (!stat.isDirectory()) {
+        return { success: false, error: 'Path is not a directory', entries: [] };
+      }
+      const entries = fs.readdirSync(resolved, { withFileTypes: true }).map(e => ({
+        name: e.name,
+        isDirectory: e.isDirectory(),
+        size: e.isFile() ? fs.statSync(path.join(resolved, e.name)).size : 0,
+      }));
+      return { success: true, entries, error: '' };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'Failed to list directory', entries: [] };
+    }
+  });
+
   ipcMain.handle('ai:execute-command', (_, { command }: { command: string }) => {
     return terminalManager.executeCommand(command);
   });
@@ -335,14 +409,26 @@ export function registerIpcHandlers(terminalManager: TerminalManager): void {
       if (fs.existsSync(memPath)) {
         return JSON.parse(fs.readFileSync(memPath, 'utf-8'));
       }
-    } catch { /* ignore */ }
+    } catch (e) {
+      console.error('[MEMORY] Failed to load memory file, resetting:', e);
+    }
     return {};
   }
 
   function saveMemory(memory: Record<string, string>): void {
+    // Atomic write: write to temp file, then rename
+    const memPath = getMemoryPath();
+    const tmpPath = memPath + '.tmp';
     try {
-      fs.writeFileSync(getMemoryPath(), JSON.stringify(memory, null, 2), 'utf-8');
-    } catch { /* ignore */ }
+      const dir = path.dirname(memPath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(tmpPath, JSON.stringify(memory, null, 2), 'utf-8');
+      fs.renameSync(tmpPath, memPath);
+    } catch (e) {
+      console.error('[MEMORY] Failed to save memory file:', e);
+      // Clean up temp file if rename failed
+      try { if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+    }
   }
 
   ipcMain.handle('memory:save-note', (_, { key, value }: { key: string; value: string }) => {

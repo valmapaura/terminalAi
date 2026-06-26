@@ -1,4 +1,4 @@
-import type { TerminalAPI, SettingsAPI, ProviderAPI, AppAPI, AIToolsAPI, WindowControlsAPI, MemoryAPI, ModelsAPI, ChatAPI, SystemAPI } from '../../preload/preload';
+import type { TerminalAPI, SettingsAPI, ProviderAPI, AppAPI, AIToolsAPI, WindowControlsAPI, MemoryAPI, ModelsAPI, ChatAPI, SystemAPI, AppSettingsAPI } from '../../preload/preload';
 
 declare global {
   interface Window {
@@ -12,5 +12,6 @@ declare global {
     memoryAPI: MemoryAPI;
     modelsAPI: ModelsAPI;
     chatAPI: ChatAPI;
+    appSettingsAPI: AppSettingsAPI;
   }
 }

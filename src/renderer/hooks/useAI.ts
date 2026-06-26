@@ -67,11 +67,27 @@ async function executeTool(toolCall: ToolCall): Promise<{
       result = await window.terminalAPI.readBuffer(lines);
       result = result.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '').replace(/\u001b\][0-9;]*[a-zA-Z].*?(?:\u001b\\|\u0007)/g, '').replace(/[\u0000-\u001f]/g, '').trim();
     } else if (name === 'read_file') {
-      const path = args.path as string;
-      result = await window.aiToolsAPI.executeCommand(`type "${path}"`);
+      const filePath = args.path as string;
+      const readResult = await window.aiToolsAPI.readFile(filePath);
+      if (readResult.success) {
+        result = readResult.content;
+      } else {
+        result = `Error: ${readResult.error}`;
+        hadError = true;
+      }
     } else if (name === 'list_directory') {
-      const path = args.path as string;
-      result = await window.aiToolsAPI.executeCommand(`dir "${path}" /w`);
+      const dirPath = args.path as string;
+      const listResult = await window.aiToolsAPI.listDirectory(dirPath);
+      if (listResult.success) {
+        const lines = listResult.entries.map(e => {
+          const sizeStr = e.isDirectory ? '<DIR>' : `${e.size}`;
+          return `${e.isDirectory ? '📁' : '📄'} ${e.name.padEnd(30)} ${sizeStr}`;
+        });
+        result = lines.join('\n') || '(empty directory)';
+      } else {
+        result = `Error: ${listResult.error}`;
+        hadError = true;
+      }
     } else if (name === 'save_note') {
       const key = args.key as string;
       const value = args.value as string;
