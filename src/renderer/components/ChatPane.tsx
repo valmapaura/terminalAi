@@ -111,7 +111,7 @@ function makeSessionId(): string {
   return `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, isStreaming, onOpenSettings, onClear: _onClear, onStop, messages: apiMessages, onSendMessage: sendMessage, onClearMessages: clearMessages, onLoadMessages: loadMessages, providerLabel, pendingToolCalls, pendingToolCallWarnings = {}, agentMode, onApprove, onApproveAlways, onSkip, errorMessage, onClearError }) => {
+export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, isStreaming, onOpenSettings, onClear: _onClear, onStop, messages: apiMessages, onSendMessage: sendMessage, onClearMessages: clearMessages, onLoadMessages: loadMessages, providerLabel, pendingToolCalls, pendingToolCallWarnings = {}, onApprove, onApproveAlways, onSkip, errorMessage, onClearError }) => {
   const [input, setInput] = useState('');
   const [injectedCode, setInjectedCode] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
