@@ -270,6 +270,140 @@ export const AI_TOOLS: ToolDefinition[] = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'create_directory',
+      description: 'Create a directory (and any missing parent directories) using Node.js fs. Use this to set up folder structures for projects, organize files, or create output directories. Unlike execute_command mkdir, this works silently without cluttering the visible terminal.',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: {
+            type: 'string',
+            description: 'Full absolute path to the directory to create (e.g., C:\\Users\\...\\new-folder on Windows)',
+          },
+          description: {
+            type: 'string',
+            description: 'Brief explanation of what this directory is for',
+          },
+        },
+        required: ['path', 'description'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'copy_file',
+      description: 'Copy a file from source to destination using Node.js fs. Use this to duplicate files, back up configuration, or copy templates. Directories cannot be copied with this tool — use execute_command for recursive directory copies.',
+      parameters: {
+        type: 'object',
+        properties: {
+          source: {
+            type: 'string',
+            description: 'Full absolute path to the source file',
+          },
+          destination: {
+            type: 'string',
+            description: 'Full absolute path to the destination (including filename)',
+          },
+          description: {
+            type: 'string',
+            description: 'Brief explanation of why this file is being copied',
+          },
+        },
+        required: ['source', 'destination', 'description'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'move_file',
+      description: 'Move or rename a file using Node.js fs. Use this to reorganize files, rename configuration, or move files between directories. Works for both moving and renaming. Directories cannot be moved with this tool — use execute_command with mv/Move-Item for directories.',
+      parameters: {
+        type: 'object',
+        properties: {
+          source: {
+            type: 'string',
+            description: 'Full absolute path to the current file location',
+          },
+          destination: {
+            type: 'string',
+            description: 'Full absolute path to the new file location (including new filename)',
+          },
+          description: {
+            type: 'string',
+            description: 'Brief explanation of why this file is being moved/renamed',
+          },
+        },
+        required: ['source', 'destination', 'description'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'search_in_files',
+      description: 'Search for a text pattern in files under a directory. Recursively walks the directory (up to 10 levels deep), reads text files, and returns matching lines with file paths and line numbers. Case-insensitive. Max 50 results, skips dot-directories and binary files over 512KB.',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: {
+            type: 'string',
+            description: 'Full absolute path to the root directory to search in',
+          },
+          pattern: {
+            type: 'string',
+            description: 'The text pattern to search for (case-insensitive)',
+          },
+          description: {
+            type: 'string',
+            description: 'Brief explanation of what you are searching for and why',
+          },
+        },
+        required: ['path', 'pattern', 'description'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'fetch_url',
+      description: 'Fetch a URL and return its content as text. Use this to retrieve web pages, API responses, documentation, or any online resource. Returns up to 100KB of content. Supports http and https URLs. Timeout after 15 seconds.',
+      parameters: {
+        type: 'object',
+        properties: {
+          url: {
+            type: 'string',
+            description: 'The full URL to fetch (e.g., https://example.com/page)',
+          },
+          description: {
+            type: 'string',
+            description: 'Brief explanation of why this URL is being fetched',
+          },
+        },
+        required: ['url', 'description'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_system_info',
+      description: 'Get detailed system information: OS name and version, architecture, shell type, PowerShell version, username, hostname, CPU model, RAM, and CPU core count. Use this when you need to understand the user\'s system environment — e.g., to determine available tools, file paths, or platform-specific behavior. Returns structured data without running any terminal commands.',
+      parameters: {
+        type: 'object',
+        properties: {
+          description: {
+            type: 'string',
+            description: 'Brief explanation of why you need system info',
+          },
+        },
+        required: ['description'],
+      },
+    },
+  },
 ];
 
 /**

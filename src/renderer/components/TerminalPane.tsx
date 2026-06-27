@@ -181,7 +181,15 @@ export const TerminalPane: React.FC<TerminalPaneProps> = ({ terminalId, theme })
     // Receive data from main process
     const dataHandler = ({ id, data }: { id: string; data: string }) => {
       if (id === terminalIdRef.current) {
-        term.write(data);
+        // Filter out AI execution markers so they don't clutter the visible terminal.
+        // executeOnTerminal wraps commands with @echo __CSTART_{uid}__ / __CEND_{uid}__
+        // markers. These are needed for output capture but should be invisible to the user.
+        const cleaned = data
+          .split('\n')
+          .filter((line) => !line.includes('__CSTART_') && !line.includes('__CEND_'))
+          .join('\n');
+        // If the cleaned data still has content (e.g. partial lines), write it
+        if (cleaned) term.write(cleaned);
       }
     };
     window.terminalAPI.onData(dataHandler);

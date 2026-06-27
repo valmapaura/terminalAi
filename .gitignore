@@ -33,3 +33,6 @@ os-assistant-config.json
 test-results/
 playwright-report/
 playwright/.cache/
+
+# E2E test temp output
+test-output/

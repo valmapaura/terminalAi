@@ -3,6 +3,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { execSync } from 'child_process';
+import * as https from 'https';
+import * as http from 'http';
 import { TerminalManager } from './terminal';
 
 function getConfigPath(): string {
@@ -465,6 +467,140 @@ export function registerIpcHandlers(terminalManager: TerminalManager): void {
     } catch (err) {
       return { success: false, error: err instanceof Error ? err.message : 'Failed to delete file' };
     }
+  });
+
+  ipcMain.handle('ai:create-directory', (_, { dirPath }: { dirPath: string }) => {
+    try {
+      const resolved = path.resolve(dirPath);
+      fs.mkdirSync(resolved, { recursive: true });
+      return { success: true, error: '' };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'Failed to create directory' };
+    }
+  });
+
+  ipcMain.handle('ai:copy-file', (_, { sourcePath, destPath }: { sourcePath: string; destPath: string }) => {
+    try {
+      const srcResolved = path.resolve(sourcePath);
+      const dstResolved = path.resolve(destPath);
+      if (!fs.existsSync(srcResolved)) {
+        return { success: false, error: 'Source file not found' };
+      }
+      const stat = fs.statSync(srcResolved);
+      if (!stat.isFile()) {
+        return { success: false, error: 'Source path is not a file' };
+      }
+      const dstDir = path.dirname(dstResolved);
+      if (!fs.existsSync(dstDir)) {
+        return { success: false, error: 'Destination directory does not exist' };
+      }
+      fs.copyFileSync(srcResolved, dstResolved);
+      return { success: true, error: '' };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'Failed to copy file' };
+    }
+  });
+
+  ipcMain.handle('ai:rename-file', (_, { oldPath, newPath }: { oldPath: string; newPath: string }) => {
+    try {
+      const oldResolved = path.resolve(oldPath);
+      const newResolved = path.resolve(newPath);
+      if (!fs.existsSync(oldResolved)) {
+        return { success: false, error: 'Source path not found' };
+      }
+      const newDir = path.dirname(newResolved);
+      if (!fs.existsSync(newDir)) {
+        return { success: false, error: 'Destination directory does not exist' };
+      }
+      fs.renameSync(oldResolved, newResolved);
+      return { success: true, error: '' };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'Failed to rename/move file' };
+    }
+  });
+
+  ipcMain.handle('ai:search-files', (_, { rootPath, pattern }: { rootPath: string; pattern: string }) => {
+    try {
+      const resolvedRoot = path.resolve(rootPath);
+      if (!fs.existsSync(resolvedRoot)) {
+        return { success: false, results: [], error: 'Directory not found' };
+      }
+      const results: Array<{ file: string; line: number; content: string }> = [];
+      const MAX_RESULTS = 50;
+      const MAX_FILE_SIZE = 524_288; // 512KB
+      const MAX_DEPTH = 10;
+
+      function walk(dir: string, depth: number): void {
+        if (depth > MAX_DEPTH || results.length >= MAX_RESULTS) return;
+        let entries: fs.Dirent[];
+        try {
+          entries = fs.readdirSync(dir, { withFileTypes: true });
+        } catch { return; }
+        for (const entry of entries) {
+          if (results.length >= MAX_RESULTS) break;
+          const fullPath = path.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            if (!entry.name.startsWith('.')) walk(fullPath, depth + 1);
+          } else if (entry.isFile()) {
+            try {
+              const stat = fs.statSync(fullPath);
+              if (stat.size > MAX_FILE_SIZE) continue;
+              const content = fs.readFileSync(fullPath, 'utf-8');
+              const lines = content.split('\n');
+              for (let i = 0; i < lines.length; i++) {
+                if (lines[i].toLowerCase().includes(pattern.toLowerCase())) {
+                  const snippet = lines[i].trim().substring(0, 200);
+                  results.push({ file: fullPath, line: i + 1, content: snippet });
+                  if (results.length >= MAX_RESULTS) return;
+                }
+              }
+            } catch { /* skip unreadable files */ }
+          }
+        }
+      }
+
+      walk(resolvedRoot, 0);
+      return { success: true, results, error: '' };
+    } catch (err) {
+      return { success: false, results: [], error: err instanceof Error ? err.message : 'Failed to search files' };
+    }
+  });
+
+  ipcMain.handle('ai:fetch-url', (_, { url }: { url: string }) => {
+    return new Promise<{ success: boolean; content: string; error: string }>((resolve) => {
+      try {
+        const parsedUrl = new URL(url);
+        const mod = parsedUrl.protocol === 'https:' ? https : http;
+        const options = {
+          hostname: parsedUrl.hostname,
+          port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+          path: parsedUrl.pathname + parsedUrl.search,
+          method: 'GET',
+          headers: {
+            'User-Agent': 'OS-Assistant/1.0',
+            'Accept': 'text/html,application/json,*/*',
+          },
+          timeout: 15000,
+        };
+        const req = mod.get(options, (res) => {
+          const chunks: Buffer[] = [];
+          res.on('data', (chunk: Buffer) => chunks.push(chunk));
+          res.on('end', () => {
+            const body = Buffer.concat(chunks).toString('utf-8');
+            const MAX_BODY = 100_000;
+            const content = body.length > MAX_BODY
+              ? body.substring(0, MAX_BODY) + '\n...(truncated at 100KB)'
+              : body;
+            resolve({ success: true, content, error: '' });
+          });
+        });
+        req.on('error', (err) => resolve({ success: false, content: '', error: err.message }));
+        req.on('timeout', () => { req.destroy(); resolve({ success: false, content: '', error: 'Request timed out after 15s' }); });
+        req.end();
+      } catch (err) {
+        resolve({ success: false, content: '', error: err instanceof Error ? err.message : 'Invalid URL' });
+      }
+    });
   });
 
   ipcMain.handle('ai:execute-command', (_, { command }: { command: string }) => {

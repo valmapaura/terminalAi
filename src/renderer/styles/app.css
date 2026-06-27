@@ -846,6 +846,30 @@ html, body, #root {
   border-color: var(--accent-red);
 }
 
+/* Compact mode: for consecutive completed tool calls — inline, no border, no background */
+.tool-invocation-compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 1px 0;
+  padding: 1px 4px;
+  border: none;
+  background: none;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.tool-invocation-compact .tool-invocation-status {
+  width: auto;
+  height: auto;
+}
+
+.tool-invocation-label-compact {
+  color: var(--text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 .tool-invocation-header {
   display: flex;
   align-items: center;

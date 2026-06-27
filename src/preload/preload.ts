@@ -85,6 +85,16 @@ export interface AIToolsAPI {
   editFile(filePath: string, oldText: string, newText: string): Promise<{ success: boolean; error: string; linesChanged?: string }>;
   /** Delete a file using Node.js fs (safe, no shell) */
   deleteFile(filePath: string): Promise<{ success: boolean; error: string }>;
+  /** Create a directory (recursive, like mkdir -p) using Node.js fs */
+  createDirectory(dirPath: string): Promise<{ success: boolean; error: string }>;
+  /** Copy a file using Node.js fs */
+  copyFile(sourcePath: string, destPath: string): Promise<{ success: boolean; error: string }>;
+  /** Rename or move a file using Node.js fs */
+  renameFile(oldPath: string, newPath: string): Promise<{ success: boolean; error: string }>;
+  /** Search for a text pattern in files under a directory (recursive, case-insensitive) */
+  searchInFiles(rootPath: string, pattern: string): Promise<{ success: boolean; results: Array<{ file: string; line: number; content: string }>; error: string }>;
+  /** Fetch a URL and return its content */
+  fetchUrl(url: string): Promise<{ success: boolean; content: string; error: string }>;
 }
 
 export interface MemoryAPI {
@@ -181,6 +191,11 @@ contextBridge.exposeInMainWorld('aiToolsAPI', {
   writeFile: (filePath: string, content: string) => ipcRenderer.invoke('ai:write-file', { filePath, content }),
   editFile: (filePath: string, oldText: string, newText: string) => ipcRenderer.invoke('ai:edit-file', { filePath, oldText, newText }),
   deleteFile: (filePath: string) => ipcRenderer.invoke('ai:delete-file', { filePath }),
+  createDirectory: (dirPath: string) => ipcRenderer.invoke('ai:create-directory', { dirPath }),
+  copyFile: (sourcePath: string, destPath: string) => ipcRenderer.invoke('ai:copy-file', { sourcePath, destPath }),
+  renameFile: (oldPath: string, newPath: string) => ipcRenderer.invoke('ai:rename-file', { oldPath, newPath }),
+  searchInFiles: (rootPath: string, pattern: string) => ipcRenderer.invoke('ai:search-files', { rootPath, pattern }),
+  fetchUrl: (url: string) => ipcRenderer.invoke('ai:fetch-url', { url }),
 } satisfies AIToolsAPI);
 
 contextBridge.exposeInMainWorld('memoryAPI', {

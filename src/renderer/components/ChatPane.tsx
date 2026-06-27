@@ -442,6 +442,15 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
       case 'read_notes': return 'Reading notes';
       case 'delete_note': return 'Deleting note';
       case 'measure_bandwidth': return 'Measuring bandwidth';
+      case 'write_file': return 'Writing file';
+      case 'edit_file': return 'Editing file';
+      case 'delete_file': return 'Deleting file';
+      case 'create_directory': return 'Creating directory';
+      case 'copy_file': return 'Copying file';
+      case 'move_file': return 'Moving file';
+      case 'search_in_files': return 'Searching files';
+      case 'fetch_url': return 'Fetching URL';
+      case 'get_system_info': return 'Getting system info';
       default: return `Using ${name}`;
     }
   };
@@ -457,6 +466,15 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
       case 'read_notes': return 'Read notes';
       case 'delete_note': return 'Deleted note';
       case 'measure_bandwidth': return 'Measured bandwidth';
+      case 'write_file': return 'Wrote file';
+      case 'edit_file': return 'Edited file';
+      case 'delete_file': return 'Deleted file';
+      case 'create_directory': return 'Created directory';
+      case 'copy_file': return 'Copied file';
+      case 'move_file': return 'Moved file';
+      case 'search_in_files': return 'Searched files';
+      case 'fetch_url': return 'Fetched URL';
+      case 'get_system_info': return 'Got system info';
       default: return `Used ${name}`;
     }
   };
@@ -466,10 +484,25 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
     toolName: string;
     toolStatus?: 'running' | 'completed' | 'error';
     content: string;
-  }> = ({ toolName, toolStatus, content }) => {
+    compact?: boolean;
+  }> = ({ toolName, toolStatus, content, compact }) => {
     const [expanded, setExpanded] = useState(toolStatus === 'error');
     const isRunning = toolStatus === 'running' || toolStatus === undefined;
     const isError = toolStatus === 'error';
+
+    // Compact mode: for consecutive completed tool calls — inline, no border
+    if (compact && !isRunning && !isError) {
+      return (
+        <div className="tool-invocation tool-invocation-compact">
+          <span className="tool-invocation-status">
+            <span className="tool-status-icon tool-status-ok">&#10003;</span>
+          </span>
+          <span className="tool-invocation-label-compact">
+            {getToolPastLabel(toolName)}
+          </span>
+        </div>
+      );
+    }
 
     return (
       <div className={`tool-invocation${isError ? ' tool-invocation-error' : ''}`}>
@@ -630,7 +663,11 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
             </div>
           )}
 
-          {displayMessages.map((msg) => (
+          {displayMessages.map((msg, msgIdx) => {
+            // Consecutive completed tool calls get compact rendering
+            const prevMsg = msgIdx > 0 ? displayMessages[msgIdx - 1] : null;
+            const isConsecutiveTool = !!(msg.toolName && prevMsg?.toolName && msg.toolStatus === 'completed');
+            return (
             <div key={msg.id} className={`message message-${msg.role}`}>
               <div className="message-content">
                 {/* Reasoning content — collapsible, like VS Code Copilot */}
@@ -643,6 +680,7 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
                     toolName={msg.toolName}
                     toolStatus={msg.toolStatus}
                     content={msg.content}
+                    compact={isConsecutiveTool}
                   />
                 ) : (
                   <div className="message-text" onClick={(e) => {
@@ -675,7 +713,8 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
                 )}
               </div>
             </div>
-          ))}
+          );
+        })}
           <div ref={messagesEndRef} />
 
           {/* ─── AI response placeholder — dots where the next response will appear ─── */}

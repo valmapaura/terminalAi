@@ -165,6 +165,71 @@ async function executeTool(toolCall: ToolCall): Promise<{
         result = `Error: ${deleteResult.error}`;
         hadError = true;
       }
+    } else if (name === 'create_directory') {
+      const dirPath = args.path as string;
+      const createResult = await window.aiToolsAPI.createDirectory(dirPath);
+      if (createResult.success) {
+        result = `Directory created: ${dirPath}`;
+      } else {
+        result = `Error: ${createResult.error}`;
+        hadError = true;
+      }
+    } else if (name === 'copy_file') {
+      const src = args.source as string;
+      const dst = args.destination as string;
+      const copyResult = await window.aiToolsAPI.copyFile(src, dst);
+      if (copyResult.success) {
+        result = `File copied: ${src} → ${dst}`;
+      } else {
+        result = `Error: ${copyResult.error}`;
+        hadError = true;
+      }
+    } else if (name === 'move_file') {
+      const src = args.source as string;
+      const dst = args.destination as string;
+      const moveResult = await window.aiToolsAPI.renameFile(src, dst);
+      if (moveResult.success) {
+        result = `File moved/renamed: ${src} → ${dst}`;
+      } else {
+        result = `Error: ${moveResult.error}`;
+        hadError = true;
+      }
+    } else if (name === 'search_in_files') {
+      const rootPath = args.path as string;
+      const pattern = args.pattern as string;
+      const searchResult = await window.aiToolsAPI.searchInFiles(rootPath, pattern);
+      if (searchResult.success) {
+        if (searchResult.results.length === 0) {
+          result = `No matches found for "${pattern}" in ${rootPath}`;
+        } else {
+          const lines = searchResult.results.map((r) => `${r.file}:${r.line} → ${r.content}`);
+          result = `Found ${searchResult.results.length} match(es) for "${pattern}":\n${lines.join('\n')}`;
+        }
+      } else {
+        result = `Error: ${searchResult.error}`;
+        hadError = true;
+      }
+    } else if (name === 'fetch_url') {
+      const url = args.url as string;
+      const fetchResult = await window.aiToolsAPI.fetchUrl(url);
+      if (fetchResult.success) {
+        result = fetchResult.content;
+      } else {
+        result = `Error: ${fetchResult.error}`;
+        hadError = true;
+      }
+    } else if (name === 'get_system_info') {
+      const info = await window.systemAPI.getInfo();
+      result = [
+        `OS: ${info.os}`,
+        `Architecture: ${info.architecture}`,
+        `Hostname: ${info.hostname}`,
+        `Username: ${info.username}`,
+        `Shell: ${info.shell}`,
+        `PowerShell: ${info.powershellVersion}`,
+        `CPU: ${info.cpu} (${info.cpuCores} cores)`,
+        `RAM: ${info.totalRamGB} GB`,
+      ].join('\n');
     } else if (name === 'measure_bandwidth') {
       const serverUrl = (args.serverUrl as string) || 'http://speedtest.tele2.net/10MB.zip';
       // Use curl with proper Windows format strings for bandwidth measurement

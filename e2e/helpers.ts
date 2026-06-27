@@ -1,5 +1,30 @@
 import { _electron as electron, ElectronApplication, Page } from '@playwright/test';
 import * as path from 'path';
+import * as fs from 'fs';
+
+/**
+ * Auto-load .env file if TEST_DEEPSEEK_API_KEY is not already set.
+ * This avoids needing the dotenv dependency — simple line-by-line parser.
+ */
+function loadEnv(): void {
+  if (process.env.TEST_DEEPSEEK_API_KEY) return;
+  const envPath = path.join(__dirname, '..', '.env');
+  if (!fs.existsSync(envPath)) return;
+  const content = fs.readFileSync(envPath, 'utf-8');
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const value = trimmed.slice(eqIdx + 1).trim();
+    if (key && value && !process.env[key]) {
+      process.env[key] = value;
+    }
+  }
+}
+
+loadEnv();
 
 /**
  * Launch the Electron app for testing.
