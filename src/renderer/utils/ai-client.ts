@@ -39,7 +39,7 @@ export const AI_TOOLS: ToolDefinition[] = [
     type: 'function',
     function: {
       name: 'execute_command',
-      description: 'Run a command in the terminal and return its output. Use this as your PRIMARY tool for ALL system operations. The command runs in the visible terminal so the user can see it execute. The output is captured and returned to you. Supports: networking (ping, ipconfig, netstat, nslookup, curl), disk/file operations (dir/ls, find/findstr/grep, df/du/chkdsk), process management (ps/tasklist, kill/taskkill, wmic), recovery (cls, taskkill, Ctrl+C via echo), system info (uname/systeminfo, neofetch/ver), and more. IMPORTANT: When the user asks you to check something or perform an operation, call this tool — do not hesitate or ask clarifying questions. Call this tool multiple times if needed for different commands.',
+      description: 'Run a command in the terminal and return its output. Use this as your PRIMARY tool for ALL system operations. The command runs in the visible terminal so the user can see it execute. The output is captured and returned to you. Supports: networking (ping, ipconfig, netstat, nslookup, curl), disk/file operations (dir/ls, find/findstr/grep, df/du/chkdsk), process management (ps/tasklist, kill/taskkill, wmic), recovery (cls, taskkill, Ctrl+C via echo), system info (uname/systeminfo, neofetch/ver), and more. IMPORTANT: When the user asks you to check something or perform an operation, call this tool — use good judgment and ask clarifying questions when something is ambiguous. Call this tool multiple times if needed for different commands.',
       parameters: {
         type: 'object',
         properties: {
@@ -480,8 +480,8 @@ Your job is to get things done — quickly and reliably.
 
 ## Core Behavior
 - Say hello back, answer simple questions, and jump straight into action when a task is asked.
-- Use tools right away for actions or system inspection — don't overthink it.
-- If something is ambiguous or could cause trouble, it's fine to ask a quick clarifying question.
+- Use tools right away for actions or system inspection — act decisively but use good judgment.
+- If something is ambiguous or could cause trouble, ask a quick clarifying question first.
 - Never claim to have done something without tool results, and never make up command output or file contents.
 - Reach for the most specific tool first. Fall back to \`execute_command\` when nothing else fits.
 
@@ -788,12 +788,21 @@ function toAnthropicMessages(messages: ChatMessage[]): { messages: Record<string
           role: 'assistant',
           content: [
             { type: 'text', text: m.content || '' },
-            ...m.toolCalls.map((tc) => ({
-              type: 'tool_use',
-              id: tc.id,
-              name: tc.function.name,
-              input: JSON.parse(tc.function.arguments || '{}'),
-            })),
+            ...m.toolCalls.map((tc) => {
+              let parsedArgs: Record<string, unknown> = {};
+              try {
+                parsedArgs = JSON.parse(tc.function.arguments || '{}');
+              } catch {
+                logger.warn('ANTHROPIC', `Failed to parse tool arguments for ${tc.function.name}: ${(tc.function.arguments || '').slice(0, 100)}`);
+                parsedArgs = { _parseError: true, raw: (tc.function.arguments || '').slice(0, 500) };
+              }
+              return {
+                type: 'tool_use',
+                id: tc.id,
+                name: tc.function.name,
+                input: parsedArgs,
+              };
+            }),
           ],
         };
       }
@@ -1163,10 +1172,17 @@ async function streamGoogle(
       if (m.content) parts.push({ text: m.content });
       if (m.toolCalls) {
         for (const tc of m.toolCalls) {
+          let parsedArgs: Record<string, unknown> = {};
+          try {
+            parsedArgs = JSON.parse(tc.function.arguments || '{}');
+          } catch {
+            logger.warn('GEMINI', `Failed to parse tool arguments for ${tc.function.name}: ${(tc.function.arguments || '').slice(0, 100)}`);
+            parsedArgs = { _parseError: true, raw: (tc.function.arguments || '').slice(0, 500) };
+          }
           parts.push({
             functionCall: {
               name: tc.function.name,
-              args: JSON.parse(tc.function.arguments || '{}'),
+              args: parsedArgs,
             },
           });
         }
@@ -1253,24 +1269,26 @@ async function parseGoogleStream(
         const candidates = parsed.candidates;
         if (!candidates || !candidates[0]) continue;
 
-        const part = candidates[0].content?.parts?.[0];
-        if (!part) continue;
+        const parts = candidates[0].content?.parts || [];
+        if (parts.length === 0) continue;
 
-        if (part.text) {
-          content += part.text;
-          onDelta(content, []);
-        }
+        for (const part of parts) {
+          if (part.text) {
+            content += part.text;
+            onDelta(content, []);
+          }
 
-        if (part.functionCall) {
-          pendingToolCalls.push({
-            id: `fc-${Date.now()}-${pendingToolCalls.length}`,
-            type: 'function',
-            function: {
-              name: part.functionCall.name || '',
-              arguments: JSON.stringify(part.functionCall.args || {}),
-            },
-          });
-          onDelta(content, pendingToolCalls.filter(Boolean));
+          if (part.functionCall) {
+            pendingToolCalls.push({
+              id: `fc-${Date.now()}-${pendingToolCalls.length}`,
+              type: 'function',
+              function: {
+                name: part.functionCall.name || '',
+                arguments: JSON.stringify(part.functionCall.args || {}),
+              },
+            });
+            onDelta(content, pendingToolCalls.filter(Boolean));
+          }
         }
 
         if (candidates[0]?.finishReason) {
