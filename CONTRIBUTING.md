@@ -2,6 +2,8 @@
 
 First off, thank you for considering contributing! 🎉 Your help is what makes open-source great.
 
+> **⚠️ Maintainer note:** This is a **spare-time project**. Reviews, responses, and merges happen when time allows — there is no fixed SLA. Please be patient! If you don't hear back within a couple of weeks, feel free to gently ping the thread. Unmaintained/stale issues and PRs will be auto-closed after a period of inactivity.
+
 ## Table of Contents
 
 - [Code of Conduct](#code-of-conduct)
@@ -13,6 +15,7 @@ First off, thank you for considering contributing! 🎉 Your help is what makes 
 - [Pull Request Process](#pull-request-process)
 - [Reporting Issues](#reporting-issues)
 - [Feature Requests](#feature-requests)
+- [Support](#support)
 
 ## Code of Conduct
 
@@ -129,6 +132,7 @@ chore(deps): upgrade electron to v30
 ## Pull Request Process
 
 1. **Create a branch** from `main` with a descriptive name:
+
    ```
    feat/add-ollama-provider
    fix/terminal-resize-bug
@@ -138,12 +142,14 @@ chore(deps): upgrade electron to v30
 2. **Make your changes** — keep them focused on a single concern.
 
 3. **Keep your branch up to date** with `main`:
+
    ```bash
    git fetch upstream
    git rebase upstream/main
    ```
 
 4. **Run the checks** locally:
+
    ```bash
    npm run build     # must compile without errors
    npx eslint src/   # must pass with zero errors
@@ -157,7 +163,7 @@ chore(deps): upgrade electron to v30
    - Any testing you performed
    - Screenshots (if UI-relevant)
 
-7. A maintainer will review your PR. Please respond to feedback promptly.
+7. A maintainer will review your PR when time permits. Please respond to feedback promptly so the PR doesn't go stale.
 
 ### PR Checklist
 
@@ -186,11 +192,10 @@ We welcome feature ideas! Open an issue with the label `enhancement` and describ
 - How you envision the feature working
 - Any alternatives you've considered
 
-## Getting Help
+## Support
 
-- Open a [discussion](https://github.com/valmapaura/terminalAi/discussions) for questions
-- Check existing issues before filing a duplicate
+See [SUPPORT.md](SUPPORT.md) for details on where to get help.
 
 ---
 
-*Thank you for contributing! 🚀*
+_Thank you for contributing! 🚀_

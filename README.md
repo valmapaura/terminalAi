@@ -2,6 +2,8 @@
 
 > **Your AI assistant for the operating system.** Multi-provider, split-screen terminal + AI assistant that can control your machine through natural language.
 
+> **🧑‍💻 Maintainer status:** This is a **spare-time project**. Contributions, issues, and PRs are reviewed when time allows. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
 ---
 
 ## Features
