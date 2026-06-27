@@ -28,6 +28,62 @@ marked.setOptions({
 
 import type { ValidationResult } from '../utils/command-validator';
 
+// ── Streaming Typewriter Effect ──
+// Reveals text character-by-character while streaming, for a natural typing feel.
+/** Standalone markdown renderer — safe to use at module scope */
+function renderMarkdown(content: string) {
+  const html = marked.parse(content) as string;
+  return <div className="md-content" dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+function TypewriterText({ fullText, isStreaming }: { fullText: string; isStreaming: boolean }) {
+  const displayedRef = useRef(0);
+  const [displayedLen, setDisplayedLen] = useState(fullText.length);
+  const rafRef = useRef<number>(0);
+  const contentRef = useRef(fullText);
+
+  // Determine speed factor based on content length (faster for longer output)
+  const speedRef = useRef(2);
+
+  useEffect(() => {
+    // If streaming just ended, snap to full text immediately
+    if (!isStreaming) {
+      displayedRef.current = fullText.length;
+      setDisplayedLen(fullText.length);
+      contentRef.current = fullText;
+      return;
+    }
+
+    contentRef.current = fullText;
+
+    // Calculate speed: 2-4 chars per frame depending on length
+    speedRef.current = fullText.length > 2000 ? 4 : fullText.length > 800 ? 3 : 2;
+
+    const animate = () => {
+      if (displayedRef.current < contentRef.current.length) {
+        const advance = Math.min(speedRef.current, contentRef.current.length - displayedRef.current);
+        displayedRef.current += advance;
+        setDisplayedLen(displayedRef.current);
+        rafRef.current = requestAnimationFrame(animate);
+      }
+    };
+
+    if (!rafRef.current) {
+      rafRef.current = requestAnimationFrame(animate);
+    }
+
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
+      }
+    };
+  }, [fullText, isStreaming]);
+
+  const textToRender = fullText.slice(0, displayedLen);
+  return <>{renderMarkdown(textToRender)}</>;
+}
+
 interface ChatPaneProps {
   onInjectCommand: (command: string) => void;
   hasApiKey: boolean;
@@ -336,11 +392,6 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
   };
 
   // Render markdown content using `marked` with custom code blocks
-  const renderContent = (content: string) => {
-    const html = marked.parse(content) as string;
-    return <div className="md-content" dangerouslySetInnerHTML={{ __html: html }} />;
-  };
-
   // ─── Tool Confirmation Card — like VS Code Copilot's ChatTerminalToolConfirmationSubPart ───
   const ToolConfirmationCard: React.FC = () => {
     if (!pendingToolCalls || pendingToolCalls.length === 0) return null;
@@ -579,9 +630,6 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
         </div>
       </div>
 
-      {/* Progress bar */}
-      {isStreaming && <div className="streaming-progress-bar" />}
-
       <div className="chat-body">
         {/* ─── History Sidebar ─── */}
         {showHistory && (
@@ -689,7 +737,14 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
                       const code = btn.getAttribute('data-code') || '';
                       if (code) handleInject(code);
                     }
-                  }}>{renderContent(msg.content)}</div>
+                  }}>
+                    {/* Use typewriter effect for actively streaming assistant messages */}
+                    {msg.id === 'streaming-assistant' && isStreaming ? (
+                      <TypewriterText fullText={msg.content} isStreaming={true} />
+                    ) : (
+                      renderMarkdown(msg.content)
+                    )}
+                  </div>
                 )}
 
                 {/* Inject buttons for code blocks in assistant messages */}

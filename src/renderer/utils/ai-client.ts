@@ -39,7 +39,7 @@ export const AI_TOOLS: ToolDefinition[] = [
     type: 'function',
     function: {
       name: 'execute_command',
-      description: 'Run a command in the terminal and return its output. Use this as your PRIMARY tool for ALL system operations. The command runs in the visible terminal so the user can see it execute. The output is captured and returned to you. Supports: networking (ping, ipconfig, netstat, nslookup, curl), disk/file operations (dir/ls, find/findstr/grep, df/du/chkdsk), process management (ps/tasklist, kill/taskkill), system info (uname/systeminfo, neofetch/ver), and more. IMPORTANT: When the user asks you to check something or perform an operation, call this tool — do not hesitate or ask clarifying questions. Call this tool multiple times if needed for different commands.',
+      description: 'Run a command in the terminal and return its output. Use this as your PRIMARY tool for ALL system operations. The command runs in the visible terminal so the user can see it execute. The output is captured and returned to you. Supports: networking (ping, ipconfig, netstat, nslookup, curl), disk/file operations (dir/ls, find/findstr/grep, df/du/chkdsk), process management (ps/tasklist, kill/taskkill, wmic), recovery (cls, taskkill, Ctrl+C via echo), system info (uname/systeminfo, neofetch/ver), and more. IMPORTANT: When the user asks you to check something or perform an operation, call this tool — do not hesitate or ask clarifying questions. Call this tool multiple times if needed for different commands.',
       parameters: {
         type: 'object',
         properties: {
@@ -60,7 +60,7 @@ export const AI_TOOLS: ToolDefinition[] = [
     type: 'function',
     function: {
       name: 'inject_terminal',
-      description: 'Type a command directly into the VISIBLE terminal pane and press Enter. Use this when you want the user to SEE the command being executed in the terminal (like showing them how to do something). The command runs in the user\'s visible terminal, not a hidden one.',
+      description: 'Type a command directly into the VISIBLE terminal pane and press Enter. Use this when you want the user to SEE the command being executed in the terminal (like showing them how to do something), or to send Ctrl+C/interrupt to a stuck process. The command runs in the user\'s visible terminal, not a hidden one.',
       parameters: {
         type: 'object',
         properties: {
@@ -456,6 +456,39 @@ Your job is to get things done — quickly and reliably.
 - Use \`read_terminal_output\` to peek at recent terminal buffer.
 - If the terminal appears stuck or unresponsive, use \`execute_command\` with a simple probe like \`echo "ready"\` or call \`execute_command\` with a fresh command — the terminal reset mechanism will automatically recover.
 
+## Process & Terminal Recovery (CRITICAL)
+Things can go wrong — stuck processes, messy terminals, orphaned jobs. Here's your recovery toolkit:
+
+### 🧹 Clearing the Terminal
+- \`cls\` — clears the visible terminal screen when it's cluttered. Run it as a regular \`execute_command\`.
+- After clearing, the terminal state (current directory, env vars) is preserved.
+
+### ⏹️ Stopping Stuck / Hung Processes
+- **Ctrl+C equivalent**: Use \`execute_command\` with a simple command like \`echo done\` — the terminal reset mechanism will automatically break out of stuck states.
+- List running processes: \`tasklist /FI "STATUS eq running"\` (Windows) or list specific processes: \`tasklist /FI "IMAGENAME eq node.exe"\`.
+- Kill by PID: \`taskkill /F /PID 1234\` (forceful) or \`taskkill /PID 1234\` (graceful).
+- Kill by name: \`taskkill /F /IM node.exe\` or \`taskkill /F /IM python.exe\`.
+- **Process termination for recovery purposes is allowed without extra confirmation** — the user wants you to clean things up.
+
+### 🔄 Recovering the Terminal
+If the terminal is in a weird state (stuck at a prompt, half-executed command, etc.):
+1. First try \`echo ready\` — this usually unsticks it.
+2. If that doesn't work, try \`cd .\` (no-op that resets state).
+3. If still stuck, send Ctrl+C via inject_terminal: \`inject_terminal\` with command being just an empty/space (sends Enter), then another with \`cls\`.
+4. Worst case: the terminal auto-recovers on the next \`execute_command\` — the system detects stuck states and resets automatically.
+
+### 🗑️ Orphaned / Background Processes
+- Sometimes processes linger after the terminal moves on. Check with \`tasklist | findstr node\` or similar.
+- Kill orphans aggressively — they consume resources. Use \`taskkill /F /IM <name>\`.
+- Common orphans to watch for: \`node.exe\`, \`python.exe\`, \`java.exe\`, \`npm\`, \`npx\`.
+
+### 🚀 Starting Fresh
+- When the user says "start fresh", "reset", or things are too messy:
+  1. Clear the screen: \`cls\`
+  2. Check current dir: \`cd\` or \`echo %cd%\`
+  3. Kill any obvious orphaned build/dev processes if present
+  4. Report back that the terminal is clean and ready
+
 ## Multi-Step Reasoning (CRITICAL)
 - When given a complex request, break it down into logical steps and work through them one at a time.
 - Think ahead about what information you'll need and gather it early.
@@ -478,7 +511,8 @@ Your job is to get things done — quickly and reliably.
 - Don't call \`read_terminal_output\` immediately after \`execute_command\` — the output is already captured in the \`execute_command\` result.
 
 ## Safety
-- Any command that deletes, overwrites, formats, touches the registry, terminates processes, or installs/uninstalls software needs explicit confirmation first.
+- Any command that deletes, overwrites, formats, touches the registry, or installs/uninstalls software needs explicit confirmation first.
+- **Process termination is allowed without confirmation when it's clearly recovery or cleanup** (stuck builds, hung apps, orphaned processes). Use good judgment — killing a random system process still needs confirmation.
 - Don't access saved notes unless the user asks.
 - If a request is unsafe or impossible, explain why and do what you safely can.
 

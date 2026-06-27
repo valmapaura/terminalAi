@@ -6,6 +6,7 @@ import { ChatPane } from './components/ChatPane';
 import { SettingsPanel } from './components/SettingsPanel';
 import { CommandPreview } from './components/CommandPreview';
 import { StatusBar } from './components/StatusBar';
+import { AboutDialog } from './components/AboutDialog';
 import { useTerminal } from './hooks/useTerminal';
 import { useAI } from './hooks/useAI';
 import type { AppSettings } from './types';
@@ -41,6 +42,7 @@ export const App: React.FC = () => {
     agentMode: 'auto',
   });
   const [showSettings, setShowSettings] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const [previewCommand, setPreviewCommand] = useState<{ command: string; validation: ValidationResult } | null>(null);
   const [platform, setPlatform] = useState('win32');
   const [appVersion, setAppVersion] = useState('0.1.0');
@@ -121,6 +123,7 @@ export const App: React.FC = () => {
       if (e.key === 'Escape') {
         if (previewCommand) { setPreviewCommand(null); e.preventDefault(); }
         else if (showSettings) { setShowSettings(false); e.preventDefault(); }
+        else if (showAbout) { setShowAbout(false); e.preventDefault(); }
       }
       if (e.ctrlKey && e.key === 'l') {
         writeToTerminal('\x0c');
@@ -166,7 +169,7 @@ export const App: React.FC = () => {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [previewCommand, showSettings, writeToTerminal]);
+  }, [previewCommand, showSettings, showAbout, writeToTerminal]);
 
   const minimize = () => window.windowControlsAPI.minimize();
   const maximize = () => window.windowControlsAPI.maximize();
@@ -270,6 +273,7 @@ export const App: React.FC = () => {
         terminalCount={terminalCount}
         splitDirection={settings.splitDirection}
         onToggleOrientation={handleToggleOrientation}
+        onShowAbout={() => setShowAbout(true)}
       />
 
       {/* Command preview modal — VS Code protection pattern */}
@@ -283,6 +287,14 @@ export const App: React.FC = () => {
             onModify={handleModifyCommand}
           />
         </div>
+      )}
+
+      {/* About dialog */}
+      {showAbout && (
+        <AboutDialog
+          version={appVersion}
+          onClose={() => setShowAbout(false)}
+        />
       )}
 
       {/* Settings modal */}

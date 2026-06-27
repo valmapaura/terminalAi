@@ -46,8 +46,8 @@
   --title-bar-height: 30px;
   --status-bar-height: 22px;
 
-  --font-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
+  --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
   --font-size: 13px;
   --font-size-sm: 12px;
   --font-size-xs: 11px;
@@ -93,8 +93,8 @@
   --title-bar-height: 30px;
   --status-bar-height: 22px;
 
-  --font-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
+  --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
   --font-size: 13px;
   --font-size-sm: 12px;
   --font-size-xs: 11px;
@@ -140,8 +140,8 @@
   --title-bar-height: 30px;
   --status-bar-height: 22px;
 
-  --font-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
+  --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
   --font-size: 13px;
   --font-size-sm: 12px;
   --font-size-xs: 11px;
@@ -187,8 +187,8 @@
   --title-bar-height: 30px;
   --status-bar-height: 22px;
 
-  --font-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
+  --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
   --font-size: 13px;
   --font-size-sm: 12px;
   --font-size-xs: 11px;
@@ -825,8 +825,8 @@ html, body, #root {
 }
 
 @keyframes messageIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  0% { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 .message-content {
@@ -1311,20 +1311,7 @@ html, body, #root {
   font-weight: bold;
 }
 
-/* Progress bar — animated bar during AI generation */
-.streaming-progress-bar {
-  height: 2px;
-  background: var(--accent-blue);
-  animation: streaming-progress 1.5s ease-in-out infinite;
-  transform-origin: left;
-  z-index: 10;
-}
 
-@keyframes streaming-progress {
-  0% { transform: scaleX(0); opacity: 1; }
-  50% { transform: scaleX(1); opacity: 0.8; }
-  100% { transform: scaleX(0); opacity: 1; }
-}
 
 .chat-input-hint {
   font-size: 10px;
@@ -2831,4 +2818,290 @@ html, body, #root {
 
 .btn-confirm-allow-danger:hover {
   background: #e74c3c !important;
+}
+
+/* ============================================================
+   About Dialog
+   ============================================================ */
+.about-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.about-dialog {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  width: 380px;
+  max-width: 90vw;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  animation: slideUp 0.2s ease-out;
+  overflow: hidden;
+}
+
+.about-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px 0;
+  position: relative;
+}
+
+.about-icon {
+  font-size: 22px;
+  color: var(--accent-blue);
+  line-height: 1;
+}
+
+.about-header h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  flex: 1;
+}
+
+.about-close-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.about-close-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.about-version {
+  padding: 0 20px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.about-description {
+  padding: 12px 20px 0;
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.about-details {
+  margin: 14px 20px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.about-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: var(--font-size-sm);
+}
+
+.about-detail-row:last-child {
+  border-bottom: none;
+}
+
+.about-detail-label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.about-detail-value {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.about-links {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 0 20px 16px;
+}
+
+.about-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all 0.15s;
+  background: var(--bg-primary);
+  cursor: pointer;
+}
+
+.about-link:hover {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  background: var(--accent-blue-bg);
+}
+
+.about-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border-color);
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-tertiary);
+}
+
+.about-footer-links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.about-footer-links a {
+  color: var(--text-link);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.about-footer-links a:hover {
+  text-decoration: underline;
+}
+
+.about-footer-sep {
+  color: var(--text-muted);
+  margin: 0 2px;
+}
+
+/* ============================================================
+   Status Bar — Link support
+   ============================================================ */
+.status-bar-link {
+  color: inherit !important;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.1s;
+}
+
+.status-bar-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+/* ============================================================
+   Premium UI Polish — subtle refinements
+   ============================================================ */
+
+/* Smoother message entrance — overrides the original keyframe */
+.message {
+  animation: messageIn 0.2s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+/* Slightly more refined user bubble */
+.message-user .message-content {
+  border-radius: 10px 4px 10px 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* Tool invocation with subtle shadow */
+.tool-invocation {
+  transition: box-shadow 0.15s;
+}
+
+.tool-invocation:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Scrollbar refinements for chat area */
+.chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Code blocks — subtle border radius refinement */
+.chat-code-block {
+  border-radius: 8px;
+}
+
+.chat-code-block pre {
+  background: var(--bg-primary) !important;
+}
+
+/* Button hover transitions */
+.btn-send {
+  transition: all 0.15s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.btn-send:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+
+/* Settings panel — premium shadow */
+.settings-panel {
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+}
+
+/* Command preview — premium shadow */
+.command-preview {
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+}
+
+/* Title bar polish */
+.title-bar {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Streaming indicator in chat header — refined */
+.streaming-indicator {
+  background: linear-gradient(135deg, var(--accent-blue-bg), color-mix(in srgb, var(--accent-blue) 5%, transparent));
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 15%, transparent);
+}
+
+/* Chat input wrapper — focus ring polish */
+.chat-input-wrapper {
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.chat-input-wrapper:focus-within {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-blue) 20%, transparent);
 }
