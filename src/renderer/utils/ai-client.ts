@@ -404,6 +404,57 @@ export const AI_TOOLS: ToolDefinition[] = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'scan_wifi',
+      description: 'Scan for nearby Wi-Fi networks and return a list with SSID, signal strength (%), channel, authentication type, encryption, and BSSID. Uses netsh to perform the scan. Use this to check available networks, find the best signal, diagnose connectivity issues, or verify network bands (2.4GHz vs 5GHz). Requires Wi-Fi adapter to be enabled.',
+      parameters: {
+        type: 'object',
+        properties: {
+          description: {
+            type: 'string',
+            description: 'Brief explanation of why you are scanning Wi-Fi',
+          },
+        },
+        required: ['description'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'monitor_hardware',
+      description: 'Get real-time hardware monitoring data: CPU usage (%), CPU temperature (°C, if sensors available), memory usage (total/used/free), disk usage (per drive), and system uptime. Uses WMI and PowerShell to query live sensor data. Use this to diagnose performance issues, overheating, memory pressure, or disk space concerns. Some metrics (like CPU temp) may not be available on all hardware — the tool reports what it can.',
+      parameters: {
+        type: 'object',
+        properties: {
+          description: {
+            type: 'string',
+            description: 'Brief explanation of why you are monitoring hardware',
+          },
+        },
+        required: ['description'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'process_tree',
+      description: 'Get a hierarchical tree view of all running processes showing parent-child relationships. For each process includes: PID, name, parent PID, CPU time, memory usage (MB), and command line. Uses WMI to query process data and builds the tree on the server side. Use this to understand process ancestry, find resource-hungry sub-processes, diagnose orphaned processes, or explore what\'s running on the system.',
+      parameters: {
+        type: 'object',
+        properties: {
+          description: {
+            type: 'string',
+            description: 'Brief explanation of why you need the process tree',
+          },
+        },
+        required: ['description'],
+      },
+    },
+  },
 ];
 
 /**

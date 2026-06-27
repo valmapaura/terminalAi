@@ -261,6 +261,61 @@ async function executeTool(toolCall: ToolCall): Promise<{
       } else {
         result = `Bandwidth test completed. Raw output:\n${raw || '(empty)'}`;
       }
+    } else if (name === 'scan_wifi') {
+      const scanResult = await window.aiToolsAPI.scanWifi();
+      if (scanResult.success) {
+        if (scanResult.notice) {
+          result = scanResult.notice;
+        } else if (scanResult.networks && scanResult.networks.length > 0) {
+          // Sort by signal strength descending
+          const sorted = [...scanResult.networks].sort((a, b) => {
+            const aSig = parseInt(a.signalStrength) || 0;
+            const bSig = parseInt(b.signalStrength) || 0;
+            return bSig - aSig;
+          });
+          const lines = sorted.map((n, i) =>
+            `${i + 1}. ${n.ssid}\n   Signal: ${n.signalStrength}  Channel: ${n.channel}  Auth: ${n.auth}  Band: ${n.radioType}`
+          );
+          result = `Found ${sorted.length} network(s):\n\n${lines.join('\n\n')}`;
+        } else {
+          result = 'No Wi-Fi networks found. Wi-Fi may be disabled or no networks in range.';
+        }
+      } else {
+        result = `Error: ${scanResult.error}`;
+        hadError = true;
+      }
+    } else if (name === 'monitor_hardware') {
+      const hwResult = await window.aiToolsAPI.monitorHardware();
+      if (hwResult.success && hwResult.data) {
+        const d = hwResult.data;
+        const parts: string[] = [];
+        if (d.cpuUsage) parts.push(`CPU Usage: ${d.cpuUsage}`);
+        if (d.cpuTemperature) parts.push(`CPU Temp: ${d.cpuTemperature}`);
+        if (d.memory && typeof d.memory === 'object') {
+          parts.push(`Memory: ${d.memory.usedGB} / ${d.memory.totalGB} (${d.memory.usagePercent} used, ${d.memory.freeGB} free)`);
+        }
+        if (d.disks && Array.isArray(d.disks)) {
+          for (const disk of d.disks) {
+            parts.push(`Disk ${disk.drive}: ${disk.usagePercent} used (${disk.free} free of ${disk.total})`);
+          }
+        }
+        if (d.uptime) parts.push(`Uptime: ${d.uptime}`);
+        result = parts.join('\n');
+        if (hwResult.errors && hwResult.errors.length > 0) {
+          result += `\n\nNote: Some sensors unavailable: ${hwResult.errors.join(', ')}`;
+        }
+      } else {
+        result = `Error: ${hwResult.error || 'Failed to get hardware data'}`;
+        hadError = true;
+      }
+    } else if (name === 'process_tree') {
+      const treeResult = await window.aiToolsAPI.getProcessTree();
+      if (treeResult.success && treeResult.tree) {
+        result = `Process Tree (${treeResult.processCount} processes total):\n\n${treeResult.tree}`;
+      } else {
+        result = `Error: ${treeResult.error || 'Failed to get process tree'}`;
+        hadError = true;
+      }
     } else {
       result = `Unknown tool: ${name}`;
     }

@@ -607,6 +607,293 @@ export function registerIpcHandlers(terminalManager: TerminalManager): void {
     return terminalManager.executeCommand(command);
   });
 
+  // ─── Wi-Fi Network Scanner ───
+  ipcMain.handle('ai:scan-wifi', () => {
+    try {
+      const raw = execSync('netsh wlan show networks mode=bssid', { timeout: 10000, encoding: 'utf-8' });
+      const lines = raw.split('\n');
+      const networks: Array<{
+        ssid: string;
+        signalStrength: string;
+        channel: string;
+        auth: string;
+        encryption: string;
+        bssid: string;
+        radioType: string;
+      }> = [];
+      let current: Record<string, string> = {};
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        const ssidMatch = trimmed.match(/^SSID\s+\d+\s+:\s(.+)$/);
+        if (ssidMatch) {
+          if (current.ssid) {
+            networks.push({
+              ssid: current.ssid,
+              signalStrength: current.signal || 'N/A',
+              channel: current.channel || 'N/A',
+              auth: current.auth || 'N/A',
+              encryption: current.encryption || 'N/A',
+              bssid: current.bssid || 'N/A',
+              radioType: current.radio || 'N/A',
+            });
+          }
+          current = { ssid: ssidMatch[1].trim() };
+        } else if (trimmed.startsWith('Authentication')) {
+          current.auth = trimmed.split(':')[1]?.trim() || 'N/A';
+        } else if (trimmed.startsWith('Encryption')) {
+          current.encryption = trimmed.split(':')[1]?.trim() || 'N/A';
+        } else if (trimmed.startsWith('BSSID')) {
+          current.bssid = trimmed.split(':').slice(1).join(':').trim();
+        } else if (trimmed.startsWith('Signal')) {
+          current.signal = trimmed.split(':')[1]?.trim() || 'N/A';
+        } else if (trimmed.startsWith('Radio type')) {
+          current.radio = trimmed.split(':')[1]?.trim() || 'N/A';
+        } else if (trimmed.startsWith('Channel')) {
+          current.channel = trimmed.split(':')[1]?.trim() || 'N/A';
+        }
+      }
+      // Push last network
+      if (current.ssid) {
+        networks.push({
+          ssid: current.ssid,
+          signalStrength: current.signal || 'N/A',
+          channel: current.channel || 'N/A',
+          auth: current.auth || 'N/A',
+          encryption: current.encryption || 'N/A',
+          bssid: current.bssid || 'N/A',
+          radioType: current.radio || 'N/A',
+        });
+      }
+
+      // Also get current connection info
+      let currentConnection = '';
+      try {
+        currentConnection = execSync('netsh wlan show interfaces', { timeout: 5000, encoding: 'utf-8' });
+      } catch { /* not connected */ }
+
+      return { success: true, networks, currentConnection: currentConnection || '' };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      // Provide helpful guidance if Wi-Fi is unavailable
+      if (msg.includes('is not running') || msg.includes('WLAN AutoConfig')) {
+        return { success: false, error: 'Wi-Fi service (WLAN AutoConfig) is not running. Try enabling Wi-Fi first.', networks: [] };
+      }
+      if (msg.includes('No wireless') || msg.includes('no networks')) {
+        return { success: true, networks: [], currentConnection: '', notice: 'No wireless networks found. Wi-Fi may be disabled.' };
+      }
+      return { success: false, error: msg, networks: [] };
+    }
+  });
+
+  // ─── Live Hardware Monitor ───
+  ipcMain.handle('ai:monitor-hardware', () => {
+    try {
+      const result: Record<string, unknown> = {};
+      const errors: string[] = [];
+
+      // CPU Usage (load percentage)
+      try {
+        const cpuRaw = execSync('wmic cpu get loadpercentage /value', { timeout: 5000, encoding: 'utf-8' });
+        const cpuMatch = cpuRaw.match(/LoadPercentage=(\d+)/);
+        result.cpuUsage = cpuMatch ? `${cpuMatch[1]}%` : 'N/A';
+      } catch { errors.push('CPU usage'); result.cpuUsage = 'N/A'; }
+
+      // CPU Temperature (may require admin or specific hardware)
+      try {
+        const tempRaw = execSync(
+          'powershell -NoProfile -Command "Get-CimInstance -Namespace root/WMI -ClassName MSAcpi_ThermalZoneTemperature -ErrorAction Stop | Select-Object -ExpandProperty CurrentTemperature"',
+          { timeout: 10000, encoding: 'utf-8' }
+        );
+        const temps = tempRaw.trim().split('\n').filter(Boolean);
+        if (temps.length > 0) {
+          const deciKelvin = parseInt(temps[temps.length - 1].trim(), 10);
+          if (!isNaN(deciKelvin)) {
+            const celsius = Math.round((deciKelvin / 10) - 273.15);
+            result.cpuTemperature = `${celsius}°C`;
+          } else {
+            result.cpuTemperature = 'N/A';
+          }
+        } else {
+          result.cpuTemperature = 'N/A';
+        }
+      } catch { errors.push('CPU temperature'); result.cpuTemperature = 'N/A (sensors not available)'; }
+
+      // Memory
+      try {
+        const memRaw = execSync('wmic OS get TotalVisibleMemorySize,FreePhysicalMemory /value', { timeout: 5000, encoding: 'utf-8' });
+        const totalMatch = memRaw.match(/TotalVisibleMemorySize=(\d+)/);
+        const freeMatch = memRaw.match(/FreePhysicalMemory=(\d+)/);
+        if (totalMatch && freeMatch) {
+          const totalKB = parseInt(totalMatch[1], 10);
+          const freeKB = parseInt(freeMatch[1], 10);
+          const usedKB = totalKB - freeKB;
+          const totalGB = (totalKB / 1_048_576).toFixed(1);
+          const usedGB = (usedKB / 1_048_576).toFixed(1);
+          const freeGB = (freeKB / 1_048_576).toFixed(1);
+          const percent = totalKB > 0 ? Math.round((usedKB / totalKB) * 100) : 0;
+          result.memory = { totalGB: `${totalGB} GB`, usedGB: `${usedGB} GB`, freeGB: `${freeGB} GB`, usagePercent: `${percent}%` };
+        } else {
+          result.memory = 'N/A';
+        }
+      } catch { errors.push('Memory'); result.memory = 'N/A'; }
+
+      // Disk Usage
+      try {
+        const diskRaw = execSync('wmic logicaldisk get Caption,Size,FreeSpace /value', { timeout: 5000, encoding: 'utf-8' });
+        const disks: Array<{ drive: string; total: string; free: string; usagePercent: string }> = [];
+        const entries = diskRaw.split(/\n\s*\n/);
+        for (const entry of entries) {
+          const captionMatch = entry.match(/Caption=([A-Z]:)/);
+          const sizeMatch = entry.match(/Size=(\d+)/);
+          const freeMatch = entry.match(/FreeSpace=(\d+)/);
+          if (captionMatch && sizeMatch && freeMatch) {
+            const totalBytes = parseInt(sizeMatch[1], 10);
+            const freeBytes = parseInt(freeMatch[1], 10);
+            if (totalBytes > 0) {
+              const usedBytes = totalBytes - freeBytes;
+              const percent = Math.round((usedBytes / totalBytes) * 100);
+              const totalGB = (totalBytes / 1_073_741_824).toFixed(1);
+              const freeGB = (freeBytes / 1_073_741_824).toFixed(1);
+              disks.push({ drive: captionMatch[1], total: `${totalGB} GB`, free: `${freeGB} GB`, usagePercent: `${percent}%` });
+            }
+          }
+        }
+        result.disks = disks.length > 0 ? disks : 'N/A';
+      } catch { errors.push('Disk'); result.disks = 'N/A'; }
+
+      // Uptime
+      try {
+        const upRaw = execSync('wmic os get LastBootUpTime /value', { timeout: 5000, encoding: 'utf-8' });
+        const bootMatch = upRaw.match(/LastBootUpTime=(\d{14})/);
+        if (bootMatch) {
+          const bootStr = bootMatch[1];
+          const bootDate = new Date(
+            parseInt(bootStr.substring(0, 4), 10),
+            parseInt(bootStr.substring(4, 6), 10) - 1,
+            parseInt(bootStr.substring(6, 8), 10),
+            parseInt(bootStr.substring(8, 10), 10),
+            parseInt(bootStr.substring(10, 12), 10),
+            parseInt(bootStr.substring(12, 14), 10)
+          );
+          const uptimeMs = Date.now() - bootDate.getTime();
+          const uptimeHours = Math.floor(uptimeMs / 3_600_000);
+          const uptimeDays = Math.floor(uptimeHours / 24);
+          const remainingHours = uptimeHours % 24;
+          const uptimeMins = Math.floor((uptimeMs % 3_600_000) / 60_000);
+          result.uptime = `${uptimeDays}d ${remainingHours}h ${uptimeMins}m`;
+        } else {
+          result.uptime = 'N/A';
+        }
+      } catch { errors.push('Uptime'); result.uptime = 'N/A'; }
+
+      return { success: true, data: result, errors: errors.length > 0 ? errors : undefined };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'Failed to monitor hardware' };
+    }
+  });
+
+  // ─── Process Tree ───
+  ipcMain.handle('ai:process-tree', () => {
+    try {
+      // Get all processes with parent PID info via WMI
+      const raw = execSync(
+        'powershell -NoProfile -Command "Get-CimInstance -ClassName Win32_Process | Select-Object ProcessId,ParentProcessId,Name,ExecutablePath,CommandLine,@{N=\'WorkingSetMB\';E={[math]::Round($_.WorkingSetSize/1MB,1)}},@{N=\'CPUTime\';E={$_.KernelModeTime}} | ConvertTo-Json -Compress"',
+        { timeout: 15000, encoding: 'utf-8' }
+      );
+
+      // Parse the JSON output
+      // The output might be a single object or an array
+      let processes: Array<{
+        ProcessId: number;
+        ParentProcessId: number;
+        Name: string;
+        ExecutablePath?: string;
+        CommandLine?: string;
+        WorkingSetMB?: number;
+        CPUTime?: number;
+      }> = [];
+
+      try {
+        const parsed = JSON.parse(raw.trim());
+        processes = Array.isArray(parsed) ? parsed : [parsed];
+      } catch {
+        // If JSON parsing fails, try line-by-line parsing as fallback
+        const lines = raw.trim().split('\n');
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed === '[' || trimmed === ']') continue;
+          // Try comma stripping
+          const cleaned = trimmed.endsWith(',') ? trimmed.slice(0, -1) : trimmed;
+          try {
+            const proc = JSON.parse(cleaned);
+            processes.push(proc);
+          } catch { /* skip unparseable lines */ }
+        }
+      }
+
+      if (processes.length === 0) {
+        return { success: false, error: 'No process data returned', tree: '' };
+      }
+
+      // Build a tree structure
+      const procMap = new Map<number, typeof processes[0]>();
+      const childrenMap = new Map<number, number[]>();
+
+      for (const p of processes) {
+        procMap.set(p.ProcessId, p);
+        if (!childrenMap.has(p.ProcessId)) childrenMap.set(p.ProcessId, []);
+        const parentId = p.ParentProcessId || 0;
+        if (!childrenMap.has(parentId)) childrenMap.set(parentId, []);
+        if (p.ProcessId !== parentId) {
+          childrenMap.get(parentId)!.push(p.ProcessId);
+        }
+      }
+
+      // Find roots (processes whose parent doesn't exist or PID 0)
+      const roots: number[] = [];
+      for (const p of processes) {
+        if (p.ParentProcessId === 0 || p.ParentProcessId === p.ProcessId || !procMap.has(p.ParentProcessId)) {
+          roots.push(p.ProcessId);
+        }
+      }
+      if (roots.length === 0 && processes.length > 0) {
+        roots.push(processes[0].ProcessId);
+      }
+
+      // Render tree
+      const lines: string[] = [];
+      function renderNode(pid: number, depth: number, visited: Set<number>): void {
+        if (depth > 10 || visited.has(pid)) return;
+        visited.add(pid);
+        const proc = procMap.get(pid);
+        if (!proc) return;
+        const indent = '  '.repeat(depth);
+        const prefix = depth === 0 ? '─' : '├';
+        const name = proc.Name || 'unknown';
+        const mem = proc.WorkingSetMB !== undefined ? ` ${proc.WorkingSetMB}MB` : '';
+        const cmd = proc.CommandLine
+          ? ` (${proc.CommandLine.substring(0, 80).replace(/\n/g, ' ')})`
+          : '';
+        lines.push(`${indent}${prefix} ${name} (PID:${pid})${mem}${cmd}`);
+
+        const kids = (childrenMap.get(pid) || []).sort((a, b) => a - b);
+        for (const kid of kids) {
+          renderNode(kid, depth + 1, visited);
+        }
+      }
+
+      for (const root of roots) {
+        renderNode(root, 0, new Set());
+      }
+
+      const tree = lines.join('\n') || '(empty)';
+      return { success: true, tree, processCount: processes.length };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'Failed to get process tree', tree: '' };
+    }
+  });
+
   // ─── System Info — collected once at startup ───
   ipcMain.handle('system:get-info', () => {
     const release = os.release();

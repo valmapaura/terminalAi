@@ -502,6 +502,9 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
       case 'search_in_files': return 'Searching files';
       case 'fetch_url': return 'Fetching URL';
       case 'get_system_info': return 'Getting system info';
+      case 'scan_wifi': return 'Scanning Wi-Fi';
+      case 'monitor_hardware': return 'Monitoring hardware';
+      case 'process_tree': return 'Building process tree';
       default: return `Using ${name}`;
     }
   };
@@ -526,6 +529,9 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
       case 'search_in_files': return 'Searched files';
       case 'fetch_url': return 'Fetched URL';
       case 'get_system_info': return 'Got system info';
+      case 'scan_wifi': return 'Scanned Wi-Fi';
+      case 'monitor_hardware': return 'Monitored hardware';
+      case 'process_tree': return 'Built process tree';
       default: return `Used ${name}`;
     }
   };

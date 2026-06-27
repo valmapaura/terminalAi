@@ -95,6 +95,34 @@ export interface AIToolsAPI {
   searchInFiles(rootPath: string, pattern: string): Promise<{ success: boolean; results: Array<{ file: string; line: number; content: string }>; error: string }>;
   /** Fetch a URL and return its content */
   fetchUrl(url: string): Promise<{ success: boolean; content: string; error: string }>;
+  /** Scan for nearby Wi-Fi networks */
+  scanWifi(): Promise<{
+    success: boolean;
+    networks?: Array<{ ssid: string; signalStrength: string; channel: string; auth: string; encryption: string; bssid: string; radioType: string }>;
+    currentConnection?: string;
+    notice?: string;
+    error?: string;
+  }>;
+  /** Get real-time hardware monitoring data */
+  monitorHardware(): Promise<{
+    success: boolean;
+    data?: {
+      cpuUsage?: string;
+      cpuTemperature?: string;
+      memory?: { totalGB: string; usedGB: string; freeGB: string; usagePercent: string } | string;
+      disks?: Array<{ drive: string; total: string; free: string; usagePercent: string }> | string;
+      uptime?: string;
+    };
+    errors?: string[];
+    error?: string;
+  }>;
+  /** Get hierarchical process tree */
+  getProcessTree(): Promise<{
+    success: boolean;
+    tree?: string;
+    processCount?: number;
+    error?: string;
+  }>;
 }
 
 export interface MemoryAPI {
@@ -196,6 +224,9 @@ contextBridge.exposeInMainWorld('aiToolsAPI', {
   renameFile: (oldPath: string, newPath: string) => ipcRenderer.invoke('ai:rename-file', { oldPath, newPath }),
   searchInFiles: (rootPath: string, pattern: string) => ipcRenderer.invoke('ai:search-files', { rootPath, pattern }),
   fetchUrl: (url: string) => ipcRenderer.invoke('ai:fetch-url', { url }),
+  scanWifi: () => ipcRenderer.invoke('ai:scan-wifi'),
+  monitorHardware: () => ipcRenderer.invoke('ai:monitor-hardware'),
+  getProcessTree: () => ipcRenderer.invoke('ai:process-tree'),
 } satisfies AIToolsAPI);
 
 contextBridge.exposeInMainWorld('memoryAPI', {
