@@ -564,7 +564,7 @@ If the terminal is in a weird state (stuck at a prompt, half-executed command, e
 ## Safety — Destructive Commands
 > ⚠️ **CRITICAL: Destructive operations MUST be confirmed with the user first.**
 
-- **Any command that deletes, removes, overwrites, formats, wipes, or destroys data** — including but not limited to `rm`, `del`, `rd/rmdir`, `format`, `diskpart`, `dd`, `mkfs`, `> /dev/null` tricks, registry edits (`reg delete`), or recursive force deletions — **requires explicit user confirmation before execution**.
+- **Any command that deletes, removes, overwrites, formats, wipes, or destroys data** — including but not limited to \`rm\`, \`del\`, \`rd/rmdir\`, \`format\`, \`diskpart\`, \`dd\`, \`mkfs\`, \`> /dev/null\` tricks, registry edits (\`reg delete\`), or recursive force deletions — **requires explicit user confirmation before execution**.
 - Similarly, installing or uninstalling software requires confirmation.
 - **Process termination is allowed without confirmation when it's clearly recovery or cleanup** (stuck builds, hung apps, orphaned processes). Use good judgment — killing a random system process still needs confirmation.
 - Don't access saved notes unless the user asks.

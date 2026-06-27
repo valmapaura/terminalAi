@@ -33,6 +33,7 @@ OS Assistant is an Electron desktop app that combines a **full Windows CMD termi
 - **Single source of truth** — the `useAI()` hook lives in `App.tsx` and passes everything down as props (no dual hook instances).
 - **While-loop AI flow** — no recursion, no module-level helper functions. A single `sendMessage` loops through AI calls → tool execution → AI calls until the answer is ready.
 - **Electron security best practices** — `contextIsolation: true`, `sandbox: false` (required for `node-pty`), encrypted API keys via `safeStorage`, CSP headers.
+- **Safety through transparency** — the visible terminal is the primary safety mechanism. The user watches every `execute_command` execute in real-time, making this an _observable autonomy_ system, not a _restricted autonomy_ one.
 - **VS Code-inspired UX** — command preview modal before dangerous execution, reasoning/collapsible sections, status bar, provider badge.
 
 ---
@@ -310,7 +311,7 @@ Routes to the correct streaming implementation based on provider type:
 - `streamAnthropic()` — Anthropic Claude (tool_use blocks)
 - `streamGoogle()` — Google Gemini (functionCall parts)
 
-**Tools are defined as `AI_TOOLS`**: `execute_command`, `inject_terminal`, `read_terminal_output`, `read_file`, `list_directory`, `save_note`, `read_notes`, `delete_note` — 8 tools modeled as OpenAI-compatible function definitions.
+**Tools are defined as `AI_TOOLS`**: 21 tools covering terminal operations, file CRUD (read/write/edit/delete/copy/move/create-dir), directory listing, note memory, bandwidth measurement, system info, Wi-Fi scanning, hardware monitoring, process trees, URL fetching, and search — all modeled as OpenAI-compatible function definitions.
 
 **System prompt**: instructs the AI to be action-oriented, use tools immediately, be concise, avoid emoji, and never greet the user.
 
@@ -370,6 +371,20 @@ Reading key:
 ```
 
 Keys are never stored in plaintext. The renderer receives decrypted keys only at runtime.
+
+### Safety Through Transparency (Design Philosophy)
+
+Unlike headless agent systems that rely on pre-execution restrictions and role-based access control, OS Assistant uses a fundamentally different safety model:
+
+> **Observable autonomy** — the AI can act freely, but the user watches every action in real-time through the visible terminal pane.
+
+This means:
+
+- **No risk-tier abstraction needed** — every command is visible as it runs in the shared terminal
+- **Self-correcting loop** — the user sees a mistake immediately and can intervene
+- **Trust through visibility** — the system doesn't restrict; it shows
+
+The command preview modal and validator exist as _supplements_ to this model (catching typos and accidents), not as its foundation. The true safety mechanism is the glass cockpit: the AI's hands move in the terminal the user is looking at.
 
 ### Command Safety
 

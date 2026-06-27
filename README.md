@@ -1,6 +1,6 @@
 # ◆ OS Assistant
 
-> **Your AI assistant for the operating system.** Multi-provider, split-screen terminal + AI assistant that can control your machine through natural language.
+> **Your AI assistant for the operating system.** A transparent operator machine where the AI runs commands in your visible terminal — safety through visibility, not restriction.
 
 [![Latest Release](https://img.shields.io/github/v/release/valmapaura/terminalAi?label=Download&color=brightgreen)](https://github.com/valmapaura/terminalAi/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -12,16 +12,16 @@
 
 ## Features
 
-| Feature                 | Description                                                                                        |
-| ----------------------- | -------------------------------------------------------------------------------------------------- |
-| **Split‑Screen Layout** | Resizable terminal and chat panes (horizontal or vertical)                                         |
-| **Terminal Pane**       | Windows CMD via `node-pty` + `xterm.js`                                                            |
-| **AI Chat**             | Streaming AI assistant with tool calling — run commands, read output, help you script              |
-| **Multi-Provider**      | DeepSeek, OpenAI, Azure OpenAI, Anthropic Claude, Google Gemini, or any OpenAI-compatible endpoint |
-| **Command Injection**   | AI suggests commands → preview → accept/reject before execution                                    |
-| **Safety Controls**     | VS Code protection pattern — preview dangerous commands before execution                           |
-| **4 VS Code Themes**    | Dark Modern, Light Modern, Solarized Dark, Solarized Light — with matching xterm terminal colors   |
-| **Encrypted Keys**      | API keys encrypted at rest via Electron `safeStorage` (Windows Credential Manager)                 |
+| Feature                       | Description                                                                                                                      |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **Split‑Screen Layout**       | Resizable terminal and chat panes (horizontal or vertical)                                                                       |
+| **Terminal Pane**             | Windows CMD via `node-pty` + `xterm.js`                                                                                          |
+| **AI Chat**                   | Streaming AI assistant with tool calling — run commands, read output, help you script                                            |
+| **Multi-Provider**            | DeepSeek, OpenAI, Azure OpenAI, Anthropic Claude, Google Gemini, or any OpenAI-compatible endpoint                               |
+| **Command Injection**         | AI suggests commands → preview → accept/reject before execution                                                                  |
+| **Safety Through Visibility** | AI operates in your visible terminal — you watch every command in real-time. Danger preview as a supplement, not the foundation. |
+| **4 VS Code Themes**          | Dark Modern, Light Modern, Solarized Dark, Solarized Light — with matching xterm terminal colors                                 |
+| **Encrypted Keys**            | API keys encrypted at rest via Electron `safeStorage` (Windows Credential Manager)                                               |
 
 ### Supported AI Providers
 
