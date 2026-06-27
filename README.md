@@ -2,6 +2,10 @@
 
 > **Your AI assistant for the operating system.** Multi-provider, split-screen terminal + AI assistant that can control your machine through natural language.
 
+[![Latest Release](https://img.shields.io/github/v/release/valmapaura/terminalAi?label=Download&color=brightgreen)](https://github.com/valmapaura/terminalAi/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/valmapaura/terminalAi/actions/workflows/ci.yml/badge.svg)](https://github.com/valmapaura/terminalAi/actions/workflows/ci.yml)
+
 > **🧑‍💻 Maintainer status:** This is a **spare-time project**. Contributions, issues, and PRs are reviewed when time allows. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ---
@@ -42,14 +46,96 @@
 
 ---
 
-## 🚀 Getting Started
+## � Download (No Coding Required)
+
+> **⬇️ [Download the latest installer](https://github.com/valmapaura/terminalAi/releases/latest)** — no Node.js, no terminal, no coding needed. Just download and run.
+
+1. Go to **[Releases](https://github.com/valmapaura/terminalAi/releases)**
+2. Download the latest `OS Assistant Setup X.X.X.exe`
+3. Run the installer — launch the app from your Start Menu or Desktop shortcut
+4. Click **⚙️ Settings** (or press `Ctrl+,`) to enter your API key
+5. Start chatting!
+
+---
+
+## 🔑 Getting an API Key (Step-by-Step)
+
+OS Assistant needs an API key from an AI provider to work. Here's how to get one for free or cheap:
+
+<details>
+<summary><b>🟢 DeepSeek (cheapest — recommended)</b></summary>
+
+1. Go to **[platform.deepseek.com](https://platform.deepseek.com)** and sign up
+2. Go to **API Keys** in the left sidebar
+3. Click **Create API Key** — give it a name like "os-assistant"
+4. Copy the key and paste it into OS Assistant's settings
+5. Top up with a few dollars — DeepSeek is extremely cheap (~$0.14 per million tokens)
+
+</details>
+
+<details>
+<summary><b>🔵 OpenAI</b></summary>
+
+1. Go to **[platform.openai.com](https://platform.openai.com)** and sign up
+2. Go to **API Keys** → **Create new secret key**
+3. Copy the key starting with `sk-...`
+4. Paste it into OS Assistant settings
+5. Add **billing** (credit card) at [billing.openai.com](https://billing.openai.com) — usage is pay-as-you-go
+
+</details>
+
+<details>
+<summary><b>🟠 Anthropic Claude</b></summary>
+
+1. Go to **[console.anthropic.com](https://console.anthropic.com)** and sign up
+2. Go to **API Keys** → **Create API Key**
+3. Copy the key starting with `sk-ant-...`
+4. Paste it into OS Assistant settings
+5. Add billing info to start using it
+
+</details>
+
+<details>
+<summary><b>💜 Google Gemini</b></summary>
+
+1. Go to **[aistudio.google.com](https://aistudio.google.com)** and sign in
+2. Click **Get API Key** in the left sidebar
+3. Click **Create API Key** — you can use an existing Google Cloud project or create one
+4. Copy the key and paste it into OS Assistant settings
+5. Google offers a **free tier** with generous usage limits!
+
+</details>
+
+<details>
+<summary><b>⚫ Azure OpenAI</b></summary>
+
+1. You need an **Azure subscription** — go to [portal.azure.com](https://portal.azure.com)
+2. Create an **Azure OpenAI Service** resource
+3. Deploy a model (e.g. `gpt-4o`) in **Azure AI Foundry**
+4. Get the **Endpoint URL** and **API Key** from the resource's **Keys and Endpoint** page
+5. In OS Assistant, select **Azure OpenAI**, enter both the endpoint URL and key
+
+</details>
+
+<details>
+<summary><b>🟣 Custom (Local / Self-Hosted)</b></summary>
+
+1. If you run a local model (e.g. Ollama, LocalAI, vLLM), use **Custom (OpenAI-Compatible)**
+2. Set the base URL to your server (e.g. `http://localhost:11434/v1`)
+3. API key is optional for local servers
+
+</details>
+
+---
+
+## 🛠️ Build from Source (For Developers)
+
+If you'd rather build it yourself:
 
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) 18+
 - [Python](https://www.python.org/) (required for `node-pty` build on Windows)
-
-### Install & Run
 
 ```bash
 git clone https://github.com/valmapaura/terminalAi.git
@@ -59,14 +145,12 @@ npm run build
 npm start
 ```
 
-### First Launch
+### First Launch (Source Build)
 
 1. The app opens with a terminal (left) and chat (right)
-2. Click **Configure API Key** in the chat pane, or ⚙️ in the menu bar
-3. Pick your AI provider and enter your API key
+2. Click **⚙️ Settings** (or press `Ctrl+,`)
+3. Pick your AI provider and paste your API key
 4. Start chatting — the AI can run commands, read terminal output, and help you script
-
-> **No template text, no cruft.** Just a terminal, an AI chat, and your API key.
 
 ---
 
