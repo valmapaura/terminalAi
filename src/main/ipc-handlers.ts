@@ -547,17 +547,7 @@ export function registerIpcHandlers(terminalManager: TerminalManager): void {
   });
 
   // ─── Model Management (like VS Code's chatLanguageModels.json) ───
-  const modelsData = loadModels();
-
-  // Ensure at least default models exist for each provider
-  const PROVIDER_DEFAULTS: Record<string, string[]> = {
-    deepseek: [],
-    openai: [],
-    azure: [],
-    anthropic: [],
-    google: [],
-    custom: [],
-  };
+  loadModels();
 
   ipcMain.handle('models:get-all', () => {
     return loadModels();

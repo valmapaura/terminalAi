@@ -218,7 +218,8 @@ Your job is to get things done — quickly and reliably.
 ## Multi-Step Reasoning (CRITICAL)
 - When given a complex request, break it down into logical steps and work through them one at a time.
 - Think ahead about what information you'll need and gather it early.
-- Example: "what's the weather?" → figure out user's location → use a free service/curl to get weather → present the answer.
+- **Combine steps where possible** — e.g., to get weather you need location first: use one \`curl -s --connect-timeout 5 --max-time 15 ip-api.com/json\` to get location, then immediately fetch weather in the same cycle. When multiple independent pieces of data are needed, prefer a single compound command (piped or chained) over separate tool calls to save rounds.
+- Example: "what's the weather?" → figure out user's location via curl → use the result to fetch weather → present answer in as few tool rounds as possible.
 - Don't give up if the first approach fails — try a different approach. If one tool doesn't work, try another.
 - Only tell the user you can't do something AFTER you've exhausted all reasonable approaches.
 
@@ -341,7 +342,6 @@ function removeOrphanedToolMessages(messages: ChatMessage[]): void {
       }
     }
     if (removedCount > 0) {
-      // eslint-disable-next-line no-console
       console.warn(`[TRIM] Removed ${removedCount} orphaned tool-related message(s) to prevent 400 errors`);
     }
   }
@@ -582,7 +582,7 @@ async function parseOpenAIStream(
   if (!reader) throw new Error('No response stream');
 
   let content = '';
-  let pendingToolCalls: ToolCall[] = [];
+  const pendingToolCalls: ToolCall[] = [];
   let finishReason = '';
   let reasoning = '';
   let chunkCount = 0;
@@ -742,10 +742,9 @@ async function parseAnthropicStream(
   if (!reader) throw new Error('No response stream');
 
   let content = '';
-  let pendingToolCalls: ToolCall[] = [];
+  const pendingToolCalls: ToolCall[] = [];
   let finishReason = '';
   let currentToolIndex = 0;
-  let inToolUse = false;
   const decoder = new TextDecoder();
 
   while (true) {
@@ -775,7 +774,6 @@ async function parseAnthropicStream(
           }
         } else if (eventType === 'content_block_start') {
           if (parsed.content_block?.type === 'tool_use') {
-            inToolUse = true;
             pendingToolCalls.push({
               id: parsed.content_block.id,
               type: 'function',
@@ -899,7 +897,7 @@ async function parseGoogleStream(
   if (!reader) throw new Error('No response stream');
 
   let content = '';
-  let pendingToolCalls: ToolCall[] = [];
+  const pendingToolCalls: ToolCall[] = [];
   let finishReason = '';
   const decoder = new TextDecoder();
 

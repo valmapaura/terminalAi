@@ -61,11 +61,10 @@ async function executeTool(toolCall: ToolCall): Promise<{
             setTimeout(() => reject(new Error(`Command timed out after ${TIMEOUT_MS / 1000}s`)), TIMEOUT_MS)
           ),
         ]);
-      } catch (err) {
+      } catch {
         captureResult = { output: `(command timed out after ${TIMEOUT_MS / 1000}s - partial output may be available)` };
       }
       result = captureResult.output || '';
-      result = result.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '').replace(/\u001b\][0-9;]*[a-zA-Z].*?(?:\u001b\\|\u0007)/g, '').replace(/[\u0000-\u001f]/g, '').trim();
       if (!result) result = '(command completed with no output)';
     } else if (name === 'inject_terminal') {
       const cmd = args.command as string;
@@ -191,7 +190,6 @@ export function useAI(): UseAIReturn {
     setActiveProviderState(type);
     const config = await window.providerAPI.getConfig(type);
     const prefix = config.apiKey ? config.apiKey.slice(0, 12) : '(empty)';
-    const suffix = config.apiKey ? config.apiKey.slice(-4) : '';
     logger.info('AUTH', `setActiveProvider got config: hasKey=${!!config.apiKey}, len=${config.apiKey?.length}, prefix="${prefix}...", startsWithSk=${config.apiKey?.startsWith('sk-')}`);
     providerConfigRef.current = {
       type,
@@ -210,7 +208,6 @@ export function useAI(): UseAIReturn {
         setActiveProviderState(active);
         const config = await window.providerAPI.getConfig(active);
         const prefix = config.apiKey ? config.apiKey.slice(0, 12) : '(empty)';
-        const suffix = config.apiKey ? config.apiKey.slice(-4) : '';
         logger.info('AUTH', `Init load provider "${active}": hasKey=${!!config.apiKey}, len=${config.apiKey?.length}, prefix="${prefix}...", startsWithSk=${config.apiKey?.startsWith('sk-')}`);
         providerConfigRef.current = {
           type: active,
@@ -494,7 +491,6 @@ Please review your previous response and try again. If you were making tool call
         });
       } else {
         const errorMsg = err instanceof Error ? err.message : 'Failed to get response';
-        const detail = err instanceof Error && err.stack ? err.stack.split('\n').slice(0, 4).join('\n') : errorMsg;
         logger.error('SEND', `Error: ${errorMsg}`, err instanceof Error ? { stack: err.stack } : err);
         // Show user-friendly message with expandable details instead of raw error in chat
         setErrorMessage({

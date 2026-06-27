@@ -90,7 +90,7 @@ export function useTerminal() {
         terminalRef.current = null;
       }
     };
-  }, []);
+  }, [createTerminal]);
 
   return {
     terminalId,

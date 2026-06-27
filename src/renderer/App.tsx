@@ -17,8 +17,6 @@ export const App: React.FC = () => {
     isStreaming,
     hasApiKey,
     providerLabel,
-    activeProvider,
-    setActiveProvider,
     messages,
     sendMessage,
     stopGeneration,
@@ -65,7 +63,7 @@ export const App: React.FC = () => {
     return () => {
       window.windowControlsAPI.removeMaximizeListener();
     };
-  }, []);
+  }, [loadSettings]);
 
   const updateSettings = useCallback((partial: Partial<AppSettings>) => {
     setSettings((prev) => {
@@ -73,7 +71,7 @@ export const App: React.FC = () => {
       saveSettings(next);
       return next;
     });
-  }, []);
+  }, [saveSettings]);
 
   // VS Code protection pattern: preview only dangerous/destructive commands
   const handleInjectCommand = useCallback(

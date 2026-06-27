@@ -1,6 +1,30 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import type { ChatMessage, ChatSession, ToolCall, AgentMode } from '../types';
 import { TinySpinner } from './TinySpinner';
+import { marked } from 'marked';
+
+// ── Markdown renderer with custom code blocks (Run button) ──
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+const mdRenderer = new marked.Renderer();
+mdRenderer.code = ({ text, lang }) => {
+  const escaped = escapeHtml(text);
+  return `<div class="chat-code-block">
+    <div class="chat-code-header">
+      <span>${lang || 'Terminal'}</span>
+      <button class="btn-code-copy" data-code="${escaped}" title="Run in terminal">Run</button>
+    </div>
+    <pre><code class="language-${lang || 'bash'}">${escaped}</code></pre>
+  </div>`;
+};
+
+marked.setOptions({
+  renderer: mdRenderer,
+  breaks: true,
+  gfm: true,
+});
 
 interface ChatPaneProps {
   onInjectCommand: (command: string) => void;
@@ -27,7 +51,7 @@ function makeSessionId(): string {
   return `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, isStreaming, onOpenSettings, onClear, onStop, messages: apiMessages, onSendMessage: sendMessage, onClearMessages: clearMessages, onLoadMessages: loadMessages, providerLabel, pendingToolCalls, agentMode, onApprove, onApproveAlways, onSkip, errorMessage, onClearError }) => {
+export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, isStreaming, onOpenSettings, onClear: _onClear, onStop, messages: apiMessages, onSendMessage: sendMessage, onClearMessages: clearMessages, onLoadMessages: loadMessages, providerLabel, pendingToolCalls, agentMode, onApprove, onApproveAlways, onSkip, errorMessage, onClearError }) => {
   const [input, setInput] = useState('');
   const [injectedCode, setInjectedCode] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -215,7 +239,7 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
     } catch {
       console.error('Failed to delete session');
     }
-  }, [currentSessionId, loadSessions]);
+  }, [loadSessions]);
 
   // ─── Search ───
   const handleSearch = useCallback(async (query: string) => {
@@ -307,117 +331,10 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
     );
   };
 
-  // Simple markdown-like rendering
+  // Render markdown content using `marked` with custom code blocks
   const renderContent = (content: string) => {
-    const lines = content.split('\n');
-    const elements: React.ReactNode[] = [];
-    let inCodeBlock = false;
-    let codeBuffer = '';
-
-    lines.forEach((line, i) => {
-      if (line.startsWith('```')) {
-        if (inCodeBlock) {
-          elements.push(
-            <div key={`code-${i}`} className="chat-code-block">
-              <div className="chat-code-header">
-                <span>Terminal</span>
-                <button
-                  className={`btn-code-copy${injectedCode === codeBuffer ? ' injected' : ''}`}
-                  onClick={() => handleInject(codeBuffer)}
-                  title="Run in terminal"
-                >
-                  {injectedCode === codeBuffer ? '✓' : 'Run'}
-                </button>
-              </div>
-              <pre><code>{codeBuffer}</code></pre>
-            </div>
-          );
-          codeBuffer = '';
-          inCodeBlock = false;
-        } else {
-          inCodeBlock = true;
-        }
-        return;
-      }
-
-      if (inCodeBlock) {
-        codeBuffer += (codeBuffer ? '\n' : '') + line;
-        return;
-      }
-
-      if (line.startsWith('> ')) {
-        elements.push(
-          <blockquote key={i} className="chat-blockquote">
-            {renderInline(line.slice(2))}
-          </blockquote>
-        );
-        return;
-      }
-
-      if (!line.trim()) {
-        elements.push(<div key={i} className="chat-spacer" />);
-        return;
-      }
-
-      elements.push(
-        <p key={i} className="chat-paragraph">
-          {renderInline(line)}
-        </p>
-      );
-    });
-
-    if (codeBuffer) {
-      elements.push(
-        <div key="code-unclosed" className="chat-code-block">
-          <div className="chat-code-header">
-            <span>Terminal</span>
-            <button
-              className={`btn-code-copy${injectedCode === codeBuffer ? ' injected' : ''}`}
-              onClick={() => handleInject(codeBuffer)}
-              title="Run in terminal"
-            >
-              {injectedCode === codeBuffer ? '✓' : 'Run'}
-            </button>
-          </div>
-          <pre><code>{codeBuffer}</code></pre>
-        </div>
-      );
-    }
-
-    return elements;
-  };
-
-  const renderInline = (text: string) => {
-    const parts: React.ReactNode[] = [];
-    let remaining = text;
-
-    while (remaining) {
-      const codeMatch = remaining.match(/`([^`]+)`/);
-      const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
-
-      if (!codeMatch && !boldMatch) {
-        parts.push(remaining);
-        break;
-      }
-
-      const firstCode = codeMatch ? codeMatch.index! : Infinity;
-      const firstBold = boldMatch ? boldMatch.index! : Infinity;
-
-      if (firstCode < firstBold && codeMatch) {
-        parts.push(remaining.slice(0, firstCode));
-        parts.push(<code key={`code-${parts.length}`} className="chat-inline-code">{codeMatch[1]}</code>);
-        remaining = remaining.slice(firstCode + codeMatch[0].length);
-      } else if (boldMatch) {
-        parts.push(remaining.slice(0, firstBold));
-        parts.push(<strong key={`bold-${parts.length}`}>{boldMatch[1]}</strong>);
-        remaining = remaining.slice(firstBold + boldMatch[0].length);
-      } else {
-        parts.push(remaining);
-        break;
-      }
-    }
-
-    return parts;
+    const html = marked.parse(content) as string;
+    return <div className="md-content" dangerouslySetInnerHTML={{ __html: html }} />;
   };
 
   // ─── Tool Confirmation Card — like VS Code Copilot's ChatTerminalToolConfirmationSubPart ───
@@ -434,8 +351,7 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
           </span>
         </div>
         <div className="tool-confirmation-commands">
-          {pendingToolCalls.map((tc, i) => {
-            let label = tc.function.name;
+          {pendingToolCalls.map((tc) => {
             let detail = '';
             try {
               const args = JSON.parse(tc.function.arguments);
@@ -708,7 +624,13 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
                     content={msg.content}
                   />
                 ) : (
-                  <div className="message-text">{renderContent(msg.content)}</div>
+                  <div className="message-text" onClick={(e) => {
+                    const btn = (e.target as HTMLElement).closest('.btn-code-copy');
+                    if (btn) {
+                      const code = btn.getAttribute('data-code') || '';
+                      if (code) handleInject(code);
+                    }
+                  }}>{renderContent(msg.content)}</div>
                 )}
 
                 {/* Inject buttons for code blocks in assistant messages */}

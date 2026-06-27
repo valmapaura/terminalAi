@@ -1022,6 +1022,106 @@ html, body, #root {
   margin-bottom: 4px;
 }
 
+/* ── Markdown rendered content ── */
+.md-content {
+  white-space: normal;
+  line-height: 1.6;
+}
+
+.md-content h1,
+.md-content h2,
+.md-content h3,
+.md-content h4 {
+  margin: 12px 0 6px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.md-content h1 { font-size: 1.3em; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; }
+.md-content h2 { font-size: 1.15em; }
+.md-content h3 { font-size: 1.05em; }
+.md-content h4 { font-size: 1em; }
+
+.md-content ul,
+.md-content ol {
+  padding-left: 20px;
+  margin: 6px 0;
+}
+.md-content li {
+  margin-bottom: 2px;
+}
+.md-content li > p {
+  margin: 0;
+}
+
+.md-content a {
+  color: var(--accent-blue);
+  text-decoration: underline;
+}
+.md-content a:hover {
+  opacity: 0.8;
+}
+
+.md-content blockquote {
+  border-left: 3px solid var(--accent-blue);
+  padding-left: 10px;
+  margin: 6px 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.md-content hr {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 12px 0;
+}
+
+.md-content table {
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: var(--font-size-sm);
+  width: 100%;
+}
+.md-content th,
+.md-content td {
+  border: 1px solid var(--border-color);
+  padding: 4px 8px;
+  text-align: left;
+}
+.md-content th {
+  background: var(--bg-tertiary);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.md-content td {
+  color: var(--text-secondary);
+}
+
+.md-content code {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  background: var(--bg-tertiary);
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: var(--accent-cyan);
+}
+
+.md-content pre code {
+  background: none;
+  padding: 0;
+  color: var(--accent-green);
+  white-space: pre;
+}
+
+.md-content img {
+  max-width: 100%;
+  border-radius: 4px;
+  margin: 8px 0;
+}
+
+.md-content p {
+  margin-bottom: 4px;
+}
+
 /* --- Command Suggestions --- */
 .command-actions {
   margin-top: 4px;

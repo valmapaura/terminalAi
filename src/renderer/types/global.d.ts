@@ -2,6 +2,11 @@ import type { TerminalAPI, SettingsAPI, ProviderAPI, AppAPI, AIToolsAPI, WindowC
 
 declare global {
   interface Window {
+    __AI_LOGS?: {
+      setDebug?: (v: boolean) => void;
+      dump?: () => void;
+      clear?: () => void;
+    };
     systemAPI: SystemAPI;
     terminalAPI: TerminalAPI;
     settingsAPI: SettingsAPI;

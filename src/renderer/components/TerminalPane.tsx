@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -115,7 +115,7 @@ export const TerminalPane: React.FC<TerminalPaneProps> = ({ terminalId, theme })
   const xtermRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const terminalIdRef = useRef<string | null>(null);
-  const [ready, setReady] = useState(false);
+  const [, setReady] = useState(false);
 
   // Keep a ref in sync with the prop to avoid stale closures in IPC callbacks
   useEffect(() => {
@@ -206,7 +206,7 @@ export const TerminalPane: React.FC<TerminalPaneProps> = ({ terminalId, theme })
       xtermRef.current = null;
       fitAddonRef.current = null;
     };
-  }, [terminalId]);
+  }, [terminalId, theme]);
 
   return (
     <div className="terminal-pane">

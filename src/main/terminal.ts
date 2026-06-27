@@ -94,7 +94,8 @@ export class TerminalManager {
     if (!buf || buf.length === 0) return '(empty)';
 
     const lines = buf.slice(-lineCount).join('\n');
-    return lines;
+    // Strip ANSI codes before returning to AI
+    return lines.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '').replace(/\u001b\][0-9;]*[a-zA-Z].*?(?:\u001b\\|\u0007)/g, '').replace(/[\u0000-\u001f]/g, '').trim();
   }
 
   /** Execute a command on an EXISTING visible terminal and capture output */
@@ -108,6 +109,7 @@ export class TerminalManager {
 
     return new Promise((resolve) => {
       let output = '';
+      // eslint-disable-next-line prefer-const -- timer IS reassigned below (line ~166), const can't be used
       let timer: ReturnType<typeof setTimeout>;
       let resolved = false;
       let startMarkerFound = false;
@@ -145,7 +147,11 @@ export class TerminalManager {
         // Look for end marker to know command completed
         const ei = output.indexOf(endMarker);
         if (ei !== -1) {
-          const captured = output.slice(0, ei);
+          let captured = output.slice(0, ei);
+          // Strip ANSI escape codes immediately so IPC payload is smaller
+          captured = captured.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '').replace(/\u001b\][0-9;]*[a-zA-Z].*?(?:\u001b\\|\u0007)/g, '').replace(/[\u0000-\u001f]/g, '').trim();
+          // Remove prompt suffix artifacts (e.g., "C:\Users\valma>" at end)
+          captured = captured.replace(/[A-Z]:\\(?:[^\\>]+\\)*[^\\>]*>\s*$/, '').trim();
           cleanup();
           resolve({ output: captured });
         }
@@ -162,7 +168,10 @@ export class TerminalManager {
         if (!resolved) {
           cleanup();
           // Return whatever we captured (may be partial)
-          const captured = startMarkerFound ? output : '(no output captured before timeout)';
+          let captured = startMarkerFound ? output : '(no output captured before timeout)';
+          if (startMarkerFound) {
+            captured = captured.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '').replace(/\u001b\][0-9;]*[a-zA-Z].*?(?:\u001b\\|\u0007)/g, '').replace(/[\u0000-\u001f]/g, '').trim();
+          }
           resolve({ output: captured });
         }
       }, timeoutMs);
@@ -171,7 +180,7 @@ export class TerminalManager {
 
   /** Execute a command and return output (for AI tool execution) */
   executeCommand(command: string): Promise<string> {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve, _reject) => {
       const shell = os.platform() === 'win32' ? 'cmd.exe' : '/bin/bash';
       const shellFlag = os.platform() === 'win32' ? '/c' : '-c';
       const term = pty.spawn(shell, [shellFlag, command], {

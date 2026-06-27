@@ -115,10 +115,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
         // Use defaults
       }
     })();
+    // Run only on mount — snapshot must capture initial settings
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const currentProvider = AI_PROVIDERS.find((p) => p.id === activeProvider)!;
-  const currentConfig = providerConfigs[activeProvider] || getDefaultProviderConfig(activeProvider);
 
   const handleProviderChange = async (type: AIProviderType) => {
     setActiveProvider(type);
@@ -743,7 +744,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
                       const next = !debugLogging;
                       setDebugLogging(next);
                       try {
-                        (window as any).__AI_LOGS?.setDebug?.(next);
+                        window.__AI_LOGS?.setDebug?.(next);
                       } catch { /* ignore */ }
                       const label = next ? 'ON' : 'OFF';
                       showToast(`Debug logging turned ${label}`, 'success');
@@ -769,7 +770,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
                       className="btn-secondary"
                       onClick={() => {
                         try {
-                          (window as any).__AI_LOGS?.dump?.();
+                          window.__AI_LOGS?.dump?.();
                           showToast('Logs dumped to console', 'success');
                         } catch { /* ignore */ }
                       }}
@@ -780,7 +781,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
                       className="btn-secondary"
                       onClick={() => {
                         try {
-                          (window as any).__AI_LOGS?.clear?.();
+                          window.__AI_LOGS?.clear?.();
                           showToast('Logs cleared', 'success');
                         } catch { /* ignore */ }
                       }}
