@@ -131,6 +131,23 @@ export const AI_TOOLS: ToolDefinition[] = [
   {
     type: 'function',
     function: {
+      name: 'measure_bandwidth',
+      description: 'Measure internet download speed using curl. Downloads a test file and reports speed in Mbps. Uses curl which is native on Windows — prefer this over PowerShell download methods which are fragile on this system.',
+      parameters: {
+        type: 'object',
+        properties: {
+          serverUrl: {
+            type: 'string',
+            description: 'Optional. Speed test server URL. Defaults to http://speedtest.tele2.net/10MB.zip (10MB file for accurate measurement)',
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'save_note',
       description: 'Save a note to persistent memory. Use this to remember important facts about this computer, the user\'s preferences, network configurations, or anything you want to recall in future conversations. Notes persist across chat sessions.',
       parameters: {
@@ -178,6 +195,81 @@ export const AI_TOOLS: ToolDefinition[] = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'write_file',
+      description: 'Write content to a text file. Creates the file if it doesn\'t exist, overwrites if it does. Use this to create new files, save generated code, apply configuration changes, or write scripts. The parent directory must already exist.',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: {
+            type: 'string',
+            description: 'Full absolute path to the file (e.g., C:\\Users\\... on Windows, /home/... on Linux/Mac)',
+          },
+          content: {
+            type: 'string',
+            description: 'The full content to write to the file',
+          },
+          description: {
+            type: 'string',
+            description: 'Brief explanation of what this write accomplishes',
+          },
+        },
+        required: ['path', 'content', 'description'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'edit_file',
+      description: 'Make a targeted find-and-replace edit in an existing text file. Reads the file, replaces the FIRST occurrence of oldText with newText, and writes the file back. Returns a diff summary. Use this for surgical changes to config files, scripts, or code without rewriting the entire file.',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: {
+            type: 'string',
+            description: 'Full absolute path to the file (e.g., C:\\Users\\... on Windows, /home/... on Linux/Mac)',
+          },
+          oldText: {
+            type: 'string',
+            description: 'The exact text to search for — must match exactly including whitespace and indentation',
+          },
+          newText: {
+            type: 'string',
+            description: 'The replacement text',
+          },
+          description: {
+            type: 'string',
+            description: 'Brief explanation of what this edit does',
+          },
+        },
+        required: ['path', 'oldText', 'newText', 'description'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'delete_file',
+      description: 'Delete a file from the filesystem. Permanently removes the file. Use this to clean up temporary files, remove old logs, or delete unwanted configuration files. Directories cannot be deleted with this tool — use execute_command with rm/Remove-Item for directories.',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: {
+            type: 'string',
+            description: 'Full absolute path to the file to delete',
+          },
+          description: {
+            type: 'string',
+            description: 'Brief explanation of why this file is being deleted',
+          },
+        },
+        required: ['path', 'description'],
+      },
+    },
+  },
 ];
 
 /**
@@ -208,12 +300,27 @@ Your job is to get things done — quickly and reliably.
 - Never claim to have done something without tool results, and never make up command output or file contents.
 - Reach for the most specific tool first. Fall back to \`execute_command\` when nothing else fits.
 
+## Windows-Specific Guidance
+- **On Windows, always prefer \`curl\` over PowerShell for HTTP/download tasks.** \`curl\` is natively available on this system (curl 8.x) and produces reliable output. PowerShell one-liners with \`net.webclient\`, \`Invoke-WebRequest\`, or \`[diagnostics.stopwatch]\` are fragile on Windows and often fail with encoding or timing errors.
+- For bandwidth/speed tests, use the dedicated \`measure_bandwidth\` tool which handles curl flags and output parsing correctly.
+- For simple connectivity checks, \`ping -n 3 google.com\` or \`curl -s --connect-timeout 5 --max-time 10 -o NUL -w "%{http_code}" http://example.com\`.
+- Keep commands simple — avoid long compound PowerShell one-liners.
+
+## File Operations (CRUD)
+- Use \`read_file\` to inspect any text file, \`write_file\` to create or overwrite files, \`edit_file\` for surgical find-and-replace edits (first occurrence only), and \`delete_file\` to remove files.
+- These tools use Node.js fs directly — no shell, no encoding issues. Prefer them over \`execute_command\` with PowerShell for any file read/write/edit/delete task.
+- For \`edit_file\`, include enough surrounding context in \`oldText\` to uniquely identify the target (at least 2-3 lines). The match is exact and case-sensitive.
+- \`write_file\` overwrites the entire file — use \`edit_file\` if you only need to change part of a file.
+- Sensitive system files (keys, .env, etc.) are blocked for safety.
+- Creating files in directories that don't exist yet will fail — create the directory first.
+
 ## Visible Terminal Workflow (TRANSPARENCY)
 - The \`execute_command\` tool runs commands in the **visible terminal** so the user can watch in real-time.
 - The user sees every command you type and every result.
 - For multi-step interactive workflows (e.g., \`cd\` then \`git status\`), use \`execute_command\` for each step — the terminal keeps its state between calls.
 - Use \`inject_terminal\` to type a command into the visible terminal without capturing output.
 - Use \`read_terminal_output\` to peek at recent terminal buffer.
+- If the terminal appears stuck or unresponsive, use \`execute_command\` with a simple probe like \`echo "ready"\` or call \`execute_command\` with a fresh command — the terminal reset mechanism will automatically recover.
 
 ## Multi-Step Reasoning (CRITICAL)
 - When given a complex request, break it down into logical steps and work through them one at a time.
@@ -228,7 +335,13 @@ Your job is to get things done — quickly and reliably.
 - Never repeat the exact same failing call — change something.
 - If a command times out, try a simpler or faster approach.
 - For \`execute_command\`, always add timeouts to network commands (e.g., use \`curl -s --connect-timeout 5 --max-time 15\` instead of plain \`curl -s\`) so responses come back quickly even if servers are slow.
-- For \`execute_on_terminal\`, prefer simple commands that complete quickly. For long-running output, capture what you need and move on.
+- For long-running commands, capture what you need and move on — don't wait for every last byte.
+- If \`read_terminal_output\` returns empty, the command output was already captured by \`execute_command\` — just use the result you already have.
+
+## Pacing
+- Allow adequate time between tool calls. A minimum gap is enforced by the system, so don't rush.
+- After a command completes, wait for the result before making the next tool call.
+- Don't call \`read_terminal_output\` immediately after \`execute_command\` — the output is already captured in the \`execute_command\` result.
 
 ## Safety
 - Any command that deletes, overwrites, formats, touches the registry, terminates processes, or installs/uninstalls software needs explicit confirmation first.

@@ -50,8 +50,8 @@
 ### Install & Run
 
 ```bash
-git clone https://github.com/your-username/os-assistant.git
-cd os-assistant
+git clone https://github.com/valmapaura/terminalAi.git
+cd terminalAi
 npm install
 npm run build
 npm start

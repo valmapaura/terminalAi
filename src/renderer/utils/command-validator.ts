@@ -10,19 +10,39 @@ export interface ValidationResult {
 }
 
 const DANGEROUS_PATTERNS: Array<{ pattern: RegExp; warning: string; severity: 'high' | 'critical' }> = [
-  // File system destruction
-  { pattern: /^del\s+\/f\s+\/s/i, warning: 'Force-deleting all matching files recursively', severity: 'critical' },
-  { pattern: /^rd\s+\/s/i, warning: 'Removing a directory and all its contents recursively', severity: 'critical' },
-  { pattern: /^rmdir\s+\/s/i, warning: 'Removing a directory tree', severity: 'critical' },
-  { pattern: /^format\s/i, warning: 'Formatting a disk drive — all data will be lost', severity: 'critical' },
-  { pattern: /^diskpart/i, warning: 'Disk partition tool — can destroy all data on a drive', severity: 'critical' },
+  // ── File deletion / destruction ──
+  { pattern: /^del\b/i, warning: 'Deleting files', severity: 'critical' },
+  { pattern: /^erase\b/i, warning: 'Erasing files', severity: 'critical' },
+  { pattern: /^deltree\b/i, warning: 'Deleting directory tree', severity: 'critical' },
+  { pattern: /^rm\b/i, warning: 'Deleting files or directories', severity: 'critical' },
+  { pattern: /^rmdir\b/i, warning: 'Removing directories', severity: 'critical' },
+  { pattern: /^rd\b/i, warning: 'Removing directories', severity: 'critical' },
+  // Forced recursive deletion is extra dangerous (only match flags, not paths)
+  { pattern: /\s+\/[fsr]\b/i, warning: 'Recursive/force deletion flag detected', severity: 'critical' },
 
-  // System-level operations
-  { pattern: /^shutdown\s/i, warning: 'Shutting down or restarting the system', severity: 'high' },
-  { pattern: /^taskkill\s+\/f/i, warning: 'Force-killing a process', severity: 'high' },
+  // ── Disk / volume operations ──
+  { pattern: /^format\b/i, warning: 'Formatting a disk drive — all data will be lost', severity: 'critical' },
+  { pattern: /^diskpart\b/i, warning: 'Disk partition tool — can destroy all data on a drive', severity: 'critical' },
+  { pattern: /^mkfs/i, warning: 'Creating a filesystem — will overwrite existing data', severity: 'critical' },
+  { pattern: /^fdisk/i, warning: 'Disk partitioning tool — can destroy data', severity: 'critical' },
+  { pattern: /^dd\b/i, warning: 'Low-level disk copy — can destroy data if misused', severity: 'critical' },
+
+  // ── System-level operations ──
+  { pattern: /^shutdown\b/i, warning: 'Shutting down or restarting the system', severity: 'high' },
+  { pattern: /^reboot\b/i, warning: 'Rebooting the system', severity: 'high' },
+  { pattern: /^poweroff\b/i, warning: 'Powering off the system', severity: 'high' },
+  { pattern: /^taskkill\b/i, warning: 'Terminating a process', severity: 'high' },
+  { pattern: /^kill\b/i, warning: 'Terminating a process', severity: 'high' },
+
+  // ── Registry operations ──
   { pattern: /^reg\s+delete/i, warning: 'Deleting registry keys', severity: 'critical' },
+  { pattern: /^reg\s+add/i, warning: 'Modifying registry keys', severity: 'high' },
 
-  // Network attacks (likely malicious)
+  // ── Package / software management ──
+  { pattern: /^(choco|winget|scoop|npm|pip)\s+(install|uninstall|remove)\b/i, warning: 'Installing or removing software', severity: 'high' },
+  { pattern: /^apt-get\s+(install|remove|purge|autoremove)/i, warning: 'Installing or removing system packages', severity: 'high' },
+
+  // ── Network attacks ──
   { pattern: /^ping\s+-t\s/i, warning: 'Continuous ping — could be used for network flooding', severity: 'high' },
 ];
 
@@ -70,4 +90,26 @@ export function sanitizeCommand(command: string): string {
     .trim()
     .replace(/\r?\n/g, '\r\n')
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+}
+
+/**
+ * Check if a tool call involves a dangerous command that should always prompt.
+ * Returns the validation result if dangerous, null if safe.
+ */
+export function checkToolCallForDanger(toolName: string, argsJson: string): ValidationResult | null {
+  if (toolName !== 'execute_command' && toolName !== 'inject_terminal') return null;
+  let command = '';
+  try {
+    const args = JSON.parse(argsJson);
+    command = (args.command || args.commandLine || '') as string;
+  } catch {
+    return null;
+  }
+  if (!command.trim()) return null;
+  const result = validateCommand(command);
+  // Only flag critical/high severity as dangerous (low/medium are informational)
+  if (result.severity === 'critical' || result.severity === 'high') {
+    return result;
+  }
+  return null;
 }

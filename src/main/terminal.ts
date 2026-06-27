@@ -3,11 +3,38 @@ import * as os from 'os';
 import { BrowserWindow } from 'electron';
 
 const MAX_BUFFER_LINES = 1000;
+/** Minimum gap between sequential tool-driven terminal writes (ms) */
+const MIN_TOOL_GAP_MS = 1200;
+
+/** Escape special regex chars in a marker string */
+function escapeMarker(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 export class TerminalManager {
   private terminals: Map<string, pty.IPty> = new Map();
   private buffers: Map<string, string[]> = new Map();
   private lastCreatedTerminalId: string | null = null;
+  /** Cache of the most recent executeOnTerminal output per terminal ID */
+  private lastCapturedOutput = new Map<string, string>();
+  /** Track last write time per terminal for rate limiting */
+  private lastWriteTime = new Map<string, number>();
+
+  /** Enforce minimum gap between writes to the same terminal */
+  private enforceWriteGap(id: string): Promise<void> {
+    const last = this.lastWriteTime.get(id) || 0;
+    const elapsed = Date.now() - last;
+    if (elapsed < MIN_TOOL_GAP_MS) {
+      return new Promise((resolve) => setTimeout(resolve, MIN_TOOL_GAP_MS - elapsed));
+    }
+    return Promise.resolve();
+  }
+
+  /** Get the most recent captured output (for read_buffer fallback) */
+  getLastCapturedOutput(id?: string): string {
+    const targetId = id || this.lastCreatedTerminalId || Array.from(this.lastCapturedOutput.keys())[0];
+    return targetId ? (this.lastCapturedOutput.get(targetId) || '') : '';
+  }
 
   createTerminal(id: string, win: BrowserWindow): void {
     const shell = os.platform() === 'win32' ? 'cmd.exe' : '/bin/bash';
@@ -71,6 +98,23 @@ export class TerminalManager {
       this.terminals.delete(id);
     }
     this.buffers.delete(id);
+    this.lastCapturedOutput.delete(id);
+    this.lastWriteTime.delete(id);
+  }
+
+  /** Reset a stuck terminal: sends Ctrl+C to cancel any running command, then clear screen */
+  resetTerminal(id?: string): boolean {
+    const targetId = id || this.lastCreatedTerminalId;
+    if (!targetId) return false;
+    const term = this.terminals.get(targetId);
+    if (!term) return false;
+
+    // Send Ctrl+C (0x03) to interrupt any running command
+    term.write('\x03');
+    // Send 'cls' to clear the screen (works on both cmd.exe and bash)
+    term.write('cls\r');
+    this.lastWriteTime.set(targetId, Date.now());
+    return true;
   }
 
   killAll(): void {
@@ -91,7 +135,12 @@ export class TerminalManager {
     if (!targetId) return '';
 
     const buf = this.buffers.get(targetId);
-    if (!buf || buf.length === 0) return '(empty)';
+    if (!buf || buf.length === 0) {
+      // Buffer empty — fall back to last captured output from executeOnTerminal
+      const cached = this.lastCapturedOutput.get(targetId);
+      if (cached) return cached;
+      return '(empty)';
+    }
 
     const lines = buf.slice(-lineCount).join('\n');
     // Strip ANSI codes before returning to AI
@@ -99,7 +148,7 @@ export class TerminalManager {
   }
 
   /** Execute a command on an EXISTING visible terminal and capture output */
-  async executeOnTerminal(id: string, command: string, timeoutMs: number = 5000): Promise<{ output: string; exitCode?: number }> {
+  async executeOnTerminal(id: string, command: string, timeoutMs: number = 10000): Promise<{ output: string; exitCode?: number }> {
     const term = this.terminals.get(id);
     if (!term) {
       // Fall back to hidden execution if no visible terminal
@@ -107,20 +156,25 @@ export class TerminalManager {
       return { output: result };
     }
 
+    // Enforce rate limiting between tool writes
+    await this.enforceWriteGap(id);
+
     return new Promise((resolve) => {
       let output = '';
-      // eslint-disable-next-line prefer-const -- timer IS reassigned below (line ~166), const can't be used
+      // eslint-disable-next-line prefer-const -- timer IS reassigned below
       let timer: ReturnType<typeof setTimeout>;
       let resolved = false;
       let startMarkerFound = false;
 
-      // Use unique markers bracketing the command for reliable start/end detection.
-      // This avoids fragile prompt-regex matching (which false-matches on %, $, > in Windows output).
+      // Use unique markers with echo commands so cmd.exe doesn't produce error messages.
+      // Instead of writing raw markers (which cmd.exe tries to execute as commands),
+      // use:  echo __CSTART__ & <command> & echo __CEND__
+      // This produces clean marker text in the output with no error messages.
       const uid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       const startMarker = `__CSTART_${uid}__`;
       const endMarker = `__CEND_${uid}__`;
-      const startLine = `\r\n${startMarker}\r\n`;
-      const endLine = `\r\n${endMarker}\r\n`;
+      // Wrap command with echo markers using cmd.exe & chaining — clean, no errors
+      const wrappedCommand = `@echo ${startMarker} & ${command} & @echo ${endMarker}`;
 
       // Shared cleanup: dispose listener + clear timer
       const cleanup = () => {
@@ -152,6 +206,11 @@ export class TerminalManager {
           captured = captured.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '').replace(/\u001b\][0-9;]*[a-zA-Z].*?(?:\u001b\\|\u0007)/g, '').replace(/[\u0000-\u001f]/g, '').trim();
           // Remove prompt suffix artifacts (e.g., "C:\Users\valma>" at end)
           captured = captured.replace(/[A-Z]:\\(?:[^\\>]+\\)*[^\\>]*>\s*$/, '').trim();
+          // Also clean up any echoed command line containing the markers (cmd.exe echo-on edge case)
+          captured = captured.replace(new RegExp(`@?echo\\s+${escapeMarker(startMarker)}\\s*&?\\s*`, 'gi'), '').trim();
+          // Cache this output for readBuffer fallback
+          this.lastCapturedOutput.set(id, captured);
+          this.lastWriteTime.set(id, Date.now());
           cleanup();
           resolve({ output: captured });
         }
@@ -160,8 +219,8 @@ export class TerminalManager {
       // Use onData (node-pty's typed method) instead of on('data')
       const disp = term.onData(dataHandler);
 
-      // Send marker-then-command-then-marker sequence
-      term.write(startLine + command + endLine);
+      // Send wrapped command — no raw markers, no cmd.exe errors
+      term.write(wrappedCommand + '\r');
 
       // Safety timeout
       timer = setTimeout(() => {
@@ -172,6 +231,7 @@ export class TerminalManager {
           if (startMarkerFound) {
             captured = captured.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '').replace(/\u001b\][0-9;]*[a-zA-Z].*?(?:\u001b\\|\u0007)/g, '').replace(/[\u0000-\u001f]/g, '').trim();
           }
+          this.lastWriteTime.set(id, Date.now());
           resolve({ output: captured });
         }
       }, timeoutMs);

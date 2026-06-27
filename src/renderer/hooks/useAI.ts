@@ -3,6 +3,8 @@ import type { ChatMessage, ToolCall, ProviderConfig, AIProviderType, SystemInfo,
 import { AI_TOOLS, buildSystemPrompt, streamChatCompletion, trimMessagesForContextWindow, estimateTokens, validateAndFixMessages } from '../utils/ai-client';
 import { getDefaultProviderConfig, AI_PROVIDERS } from '../types';
 import { logger } from '../utils/logger';
+import { checkToolCallForDanger } from '../utils/command-validator';
+import type { ValidationResult } from '../utils/command-validator';
 
 interface UseAIReturn {
   messages: ChatMessage[];
@@ -16,8 +18,10 @@ interface UseAIReturn {
   activeProvider: AIProviderType;
   providerLabel: string;
   setActiveProvider: (type: AIProviderType) => Promise<void>;
-  /** Tool calls awaiting user approval (agentMode === 'interactive') */
+  /** Tool calls awaiting user approval (agentMode === 'interactive' or dangerous operation override) */
   pendingToolCalls: ToolCall[] | null;
+  /** Validation warnings for pending tool calls (dangerous operation overrides) */
+  pendingToolCallWarnings: Record<string, ValidationResult>;
   /** Current agent mode */
   agentMode: AgentMode;
   /** Approve pending tool calls and execute them */
@@ -35,6 +39,17 @@ interface UseAIReturn {
 }
 
 const MAX_TOOL_CYCLES = 33;
+/** Minimum gap between sequential tool call batches (ms) — prevents overwhelming the terminal */
+const MIN_TOOL_GAP_MS = 1200;
+
+/** Wait if not enough time has elapsed since the last recorded tool execution */
+async function enforceToolGap(lastTimeRef: { current: number }): Promise<void> {
+  const elapsed = Date.now() - lastTimeRef.current;
+  if (lastTimeRef.current > 0 && elapsed < MIN_TOOL_GAP_MS) {
+    const waitMs = MIN_TOOL_GAP_MS - elapsed;
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
+  }
+}
 
 /** Execute a single tool call and return its result. */
 async function executeTool(toolCall: ToolCall): Promise<{
@@ -74,8 +89,15 @@ async function executeTool(toolCall: ToolCall): Promise<{
         : `Failed to inject command: ${injectResult.error || 'No terminal available'}. Please open a terminal first.`;
     } else if (name === 'read_terminal_output') {
       const lines = Math.min(Math.max((args.lines as number) || 30, 1), 200);
+      // Read once, and if empty, wait briefly and retry (buffer may not have flushed yet)
       result = await window.terminalAPI.readBuffer(lines);
       result = result.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '').replace(/\u001b\][0-9;]*[a-zA-Z].*?(?:\u001b\\|\u0007)/g, '').replace(/[\u0000-\u001f]/g, '').trim();
+      if (!result || result === '(empty)') {
+        // Brief wait for buffer to catch up, then retry once
+        await new Promise((r) => setTimeout(r, 800));
+        result = await window.terminalAPI.readBuffer(lines);
+        result = result.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '').replace(/\u001b\][0-9;]*[a-zA-Z].*?(?:\u001b\\|\u0007)/g, '').replace(/[\u0000-\u001f]/g, '').trim();
+      }
     } else if (name === 'read_file') {
       const filePath = args.path as string;
       const readResult = await window.aiToolsAPI.readFile(filePath);
@@ -111,6 +133,69 @@ async function executeTool(toolCall: ToolCall): Promise<{
       const key = args.key as string;
       await window.memoryAPI.deleteNote(key);
       result = `Note "${key}" deleted.`;
+    } else if (name === 'write_file') {
+      const filePath = args.path as string;
+      const content = args.content as string;
+      const writeResult = await window.aiToolsAPI.writeFile(filePath, content);
+      if (writeResult.success) {
+        const byteSize = new TextEncoder().encode(content).length;
+        const sizeStr = byteSize > 1024 ? `${(byteSize / 1024).toFixed(1)} KB` : `${byteSize} bytes`;
+        result = `File written successfully (${sizeStr}): ${filePath}`;
+      } else {
+        result = `Error: ${writeResult.error}`;
+        hadError = true;
+      }
+    } else if (name === 'edit_file') {
+      const filePath = args.path as string;
+      const oldText = args.oldText as string;
+      const newText = args.newText as string;
+      const editResult = await window.aiToolsAPI.editFile(filePath, oldText, newText);
+      if (editResult.success) {
+        result = `File edited successfully: ${filePath}${editResult.linesChanged ? ` (${editResult.linesChanged})` : ''}`;
+      } else {
+        result = `Error: ${editResult.error}`;
+        hadError = true;
+      }
+    } else if (name === 'delete_file') {
+      const filePath = args.path as string;
+      const deleteResult = await window.aiToolsAPI.deleteFile(filePath);
+      if (deleteResult.success) {
+        result = `File deleted: ${filePath}`;
+      } else {
+        result = `Error: ${deleteResult.error}`;
+        hadError = true;
+      }
+    } else if (name === 'measure_bandwidth') {
+      const serverUrl = (args.serverUrl as string) || 'http://speedtest.tele2.net/10MB.zip';
+      // Use curl with proper Windows format strings for bandwidth measurement
+      // curl on Windows supports: %{speed_download} (bare), %{http_code}, %{time_total}
+      // We parse the output to report in Mbps
+      const cmd = `curl -s --connect-timeout 5 --max-time 30 -o NUL -w "dl_speed=%{speed_download}" "${serverUrl}"`;
+      let captureResult: { output?: string; error?: string };
+      try {
+        captureResult = await Promise.race([
+          window.terminalAPI.executeAndCapture(cmd),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error(`Bandwidth test timed out after 30s`)), 35000)
+          ),
+        ]);
+      } catch {
+        captureResult = { output: '' };
+      }
+      const raw = captureResult.output || '';
+      // Parse dl_speed=XXXXX from output
+      const match = raw.match(/dl_speed=(\d+)/);
+      if (match) {
+        const bytesPerSec = parseInt(match[1], 10);
+        const kbps = (bytesPerSec / 1024).toFixed(1);
+        const mbps = ((bytesPerSec * 8) / 1_000_000).toFixed(2);
+        result = `Download speed: ${kbps} KB/s = ${mbps} Mbps\nTest file: ${serverUrl}`;
+      } else if (raw.includes('curl: (')) {
+        result = `Error: ${raw}`;
+        hadError = true;
+      } else {
+        result = `Bandwidth test completed. Raw output:\n${raw || '(empty)'}`;
+      }
     } else {
       result = `Unknown tool: ${name}`;
     }
@@ -133,10 +218,13 @@ export function useAI(): UseAIReturn {
   const messagesRef = useRef<ChatMessage[]>([]);
   const systemInfoRef = useRef<SystemInfo | null>(null);
   const [pendingToolCalls, setPendingToolCalls] = useState<ToolCall[] | null>(null);
+  const [pendingToolCallWarnings, setPendingToolCallWarnings] = useState<Record<string, ValidationResult>>({});
   const [agentMode, setAgentModeState] = useState<AgentMode>('auto');
   const [errorMessage, setErrorMessage] = useState<{ friendly: string; detail: string } | null>(null);
   const agentModeRef = useRef<AgentMode>('auto');
   const pendingResolverRef = useRef<((decision: 'approve' | 'always' | 'skip') => void) | null>(null);
+  /** Timestamp of the last tool execution batch (for rate limiting) */
+  const lastToolCallTimeRef = useRef<number>(0);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   const setAgentMode = useCallback((mode: AgentMode) => {
@@ -150,14 +238,17 @@ export function useAI(): UseAIReturn {
   }, []);
 
   const approvePending = useCallback(() => {
+    setPendingToolCallWarnings({});
     pendingResolverRef.current?.('approve');
   }, []);
 
   const approveAlwaysPending = useCallback(() => {
+    setPendingToolCallWarnings({});
     pendingResolverRef.current?.('always');
   }, []);
 
   const skipPending = useCallback(() => {
+    setPendingToolCallWarnings({});
     pendingResolverRef.current?.('skip');
   }, []);
 
@@ -441,9 +532,79 @@ Please review your previous response and try again. If you were making tool call
           // 'approve' or 'always' → fall through to execute tools
         }
 
+        // ── Dangerous operation override (even in auto mode) ──
+        // Check each tool call for dangerous commands. If found, pause for approval
+        // even when agentMode is 'auto' — destructive operations always need consent.
+        const dangerResults: { index: number; warnings: ValidationResult }[] = [];
+        for (let i = 0; i < validToolCalls.length; i++) {
+          const tc = validToolCalls[i];
+          const danger = checkToolCallForDanger(tc.function.name, tc.function.arguments);
+          if (danger) {
+            dangerResults.push({ index: i, warnings: danger });
+          }
+        }
+        if (dangerResults.length > 0) {
+          // Build a warnings map keyed by tool call ID
+          const warningMap: Record<string, ValidationResult> = {};
+          for (const d of dangerResults) {
+            warningMap[validToolCalls[d.index].id] = d.warnings;
+          }
+          setPendingToolCallWarnings(warningMap);
+          setPendingToolCalls(validToolCalls);
+          const decision = await new Promise<'approve' | 'always' | 'skip'>((resolve) => {
+            const timeoutId = setTimeout(() => {
+              logger.warn('DANGER', 'Dangerous operation prompt timed out after 5 min, skipping');
+              resolve('skip');
+            }, 300_000);
+            pendingResolverRef.current = (val: 'approve' | 'always' | 'skip') => {
+              clearTimeout(timeoutId);
+              resolve(val);
+            };
+          });
+          setPendingToolCalls(null);
+          setPendingToolCallWarnings({});
+          pendingResolverRef.current = null;
+
+          if (decision === 'skip') {
+            const skipResults = validToolCalls.map(tc => ({
+              toolCallId: tc.id,
+              name: tc.function.name,
+              displayContent: '```\n(Skipped — dangerous operation requires user approval)\n```',
+              hadError: false,
+            }));
+            const skipToolResultMsgs = skipResults.map(tr => ({
+              id: `tool-${tr.toolCallId}`,
+              role: 'tool' as const,
+              content: tr.displayContent,
+              timestamp: Date.now(),
+              toolCallId: tr.toolCallId,
+              toolName: tr.name,
+              toolStatus: 'completed' as const,
+            }));
+            setMessages((prev) => {
+              const updated = [...prev, ...skipToolResultMsgs];
+              messagesRef.current = updated;
+              return updated;
+            });
+            currentMsgs = [...messagesRef.current, ...skipToolResultMsgs];
+            cycles++;
+            continue;
+          }
+
+          if (decision === 'always') {
+            agentModeRef.current = 'auto';
+            setAgentModeState('auto');
+          }
+          // 'approve' or 'always' → fall through to execute tools
+        }
+
+        // ── Rate limiting: enforce minimum gap between tool call batches ──
+        await enforceToolGap(lastToolCallTimeRef);
+
         // ── Execute ALL tools in parallel ──
         logger.info('TOOL', `→ Executing ${validToolCalls.length} tool(s)...`);
         const toolResults = await Promise.all(validToolCalls.map(executeTool));
+        lastToolCallTimeRef.current = Date.now();
         logger.info('TOOL', `← Tools completed`);
 
         // Add tool result messages + sync ref synchronously (no effect timing dependency)
@@ -521,7 +682,7 @@ Please review your previous response and try again. If you were making tool call
     loadMessages: (msgs: ChatMessage[]) => { setMessages(msgs); messagesRef.current = msgs; },
     hasApiKey, checkApiKey, activeProvider,
     providerLabel: providerInfo?.label || 'AI', setActiveProvider,
-    pendingToolCalls, agentMode, approvePending, approveAlwaysPending, skipPending, setAgentMode,
+    pendingToolCalls, pendingToolCallWarnings, agentMode, approvePending, approveAlwaysPending, skipPending, setAgentMode,
     errorMessage, clearError,
   };
 }

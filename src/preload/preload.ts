@@ -12,6 +12,8 @@ export interface TerminalAPI {
   injectCommand(command: string): Promise<{ success: boolean; error?: string; terminalId?: string }>;
   /** Execute a command in the visible terminal and capture output */
   executeAndCapture(command: string): Promise<{ success: boolean; output: string; error?: string }>;
+  /** Reset a stuck terminal — sends Ctrl+C + cls */
+  resetTerminal(): Promise<{ success: boolean }>;
 }
 
 export interface SettingsAPI {
@@ -77,6 +79,12 @@ export interface AIToolsAPI {
     entries: Array<{ name: string; isDirectory: boolean; size: number }>;
     error: string;
   }>;
+  /** Write content to a file using Node.js fs (safe, no shell) */
+  writeFile(filePath: string, content: string): Promise<{ success: boolean; error: string }>;
+  /** Edit a file by finding and replacing text using Node.js fs (safe, no shell) */
+  editFile(filePath: string, oldText: string, newText: string): Promise<{ success: boolean; error: string; linesChanged?: string }>;
+  /** Delete a file using Node.js fs (safe, no shell) */
+  deleteFile(filePath: string): Promise<{ success: boolean; error: string }>;
 }
 
 export interface MemoryAPI {
@@ -143,6 +151,7 @@ contextBridge.exposeInMainWorld('terminalAPI', {
   },
   injectCommand: (command: string) => ipcRenderer.invoke('terminal:inject', { command }),
   executeAndCapture: (command: string) => ipcRenderer.invoke('terminal:execute-and-capture', { command }),
+  resetTerminal: () => ipcRenderer.invoke('terminal:reset'),
 } satisfies TerminalAPI);
 
 contextBridge.exposeInMainWorld('settingsAPI', {
@@ -169,6 +178,9 @@ contextBridge.exposeInMainWorld('aiToolsAPI', {
   executeCommand: (command: string) => ipcRenderer.invoke('ai:execute-command', { command }),
   readFile: (filePath: string) => ipcRenderer.invoke('ai:read-file', { filePath }),
   listDirectory: (dirPath: string) => ipcRenderer.invoke('ai:list-directory', { dirPath }),
+  writeFile: (filePath: string, content: string) => ipcRenderer.invoke('ai:write-file', { filePath, content }),
+  editFile: (filePath: string, oldText: string, newText: string) => ipcRenderer.invoke('ai:edit-file', { filePath, oldText, newText }),
+  deleteFile: (filePath: string) => ipcRenderer.invoke('ai:delete-file', { filePath }),
 } satisfies AIToolsAPI);
 
 contextBridge.exposeInMainWorld('memoryAPI', {

@@ -26,6 +26,8 @@ marked.setOptions({
   gfm: true,
 });
 
+import type { ValidationResult } from '../utils/command-validator';
+
 interface ChatPaneProps {
   onInjectCommand: (command: string) => void;
   hasApiKey: boolean;
@@ -40,6 +42,8 @@ interface ChatPaneProps {
   providerLabel: string;
   /** Tool calls awaiting user approval */
   pendingToolCalls: ToolCall[] | null;
+  /** Validation warnings for dangerous operation overrides */
+  pendingToolCallWarnings?: Record<string, ValidationResult>;
   agentMode: AgentMode;
   onApprove: () => void;
   onApproveAlways: () => void;
@@ -51,7 +55,7 @@ function makeSessionId(): string {
   return `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, isStreaming, onOpenSettings, onClear: _onClear, onStop, messages: apiMessages, onSendMessage: sendMessage, onClearMessages: clearMessages, onLoadMessages: loadMessages, providerLabel, pendingToolCalls, agentMode, onApprove, onApproveAlways, onSkip, errorMessage, onClearError }) => {
+export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, isStreaming, onOpenSettings, onClear: _onClear, onStop, messages: apiMessages, onSendMessage: sendMessage, onClearMessages: clearMessages, onLoadMessages: loadMessages, providerLabel, pendingToolCalls, pendingToolCallWarnings = {}, agentMode, onApprove, onApproveAlways, onSkip, errorMessage, onClearError }) => {
   const [input, setInput] = useState('');
   const [injectedCode, setInjectedCode] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -340,15 +344,20 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
   // ─── Tool Confirmation Card — like VS Code Copilot's ChatTerminalToolConfirmationSubPart ───
   const ToolConfirmationCard: React.FC = () => {
     if (!pendingToolCalls || pendingToolCalls.length === 0) return null;
+    const hasDanger = pendingToolCallWarnings && Object.keys(pendingToolCallWarnings).length > 0;
+    const titleIcon = hasDanger ? '⚠️' : '🔧';
+    const titleText = hasDanger
+      ? (pendingToolCalls.length === 1
+        ? 'Dangerous operation requires approval'
+        : `${pendingToolCalls.length} operations require approval (includes dangerous commands)`)
+      : (pendingToolCalls.length === 1
+        ? 'Tool execution requires approval'
+        : `${pendingToolCalls.length} tools require approval`);
     return (
-      <div className="tool-confirmation-card">
+      <div className={`tool-confirmation-card${hasDanger ? ' tool-confirmation-danger' : ''}`}>
         <div className="tool-confirmation-header">
-          <span className="tool-confirmation-icon">🔧</span>
-          <span className="tool-confirmation-title">
-            {pendingToolCalls.length === 1
-              ? 'Tool execution requires approval'
-              : `${pendingToolCalls.length} tools require approval`}
-          </span>
+          <span className="tool-confirmation-icon">{titleIcon}</span>
+          <span className="tool-confirmation-title">{titleText}</span>
         </div>
         <div className="tool-confirmation-commands">
           {pendingToolCalls.map((tc) => {
@@ -361,17 +370,27 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
               else if (tc.function.name === 'inject_terminal') detail = args.command || '';
               else detail = '';
             } catch { detail = tc.function.arguments; }
+            const warning = pendingToolCallWarnings?.[tc.id];
             return (
-              <div key={tc.id} className="tool-confirmation-command">
+              <div key={tc.id} className={`tool-confirmation-command${warning ? ' tool-confirmation-command-danger' : ''}`}>
                 <code className="tool-confirmation-label">{getToolLabel(tc.function.name)}</code>
+                {warning && (
+                  <div className="tool-confirmation-warning">
+                    <span className="tool-confirmation-warning-icon">⚠️</span>
+                    <span className="tool-confirmation-warning-text">
+                      {warning.warnings.join(', ')}
+                      <span className="tool-confirmation-warning-severity">({warning.severity})</span>
+                    </span>
+                  </div>
+                )}
                 {detail && <pre className="tool-confirmation-detail">{detail}</pre>}
               </div>
             );
           })}
         </div>
         <div className="tool-confirmation-buttons">
-          <button className="btn-confirm-allow" onClick={onApprove}>
-            Allow {pendingToolCalls.length > 1 ? `All (${pendingToolCalls.length})` : ''}
+          <button className={`btn-confirm-allow${hasDanger ? ' btn-confirm-allow-danger' : ''}`} onClick={onApprove}>
+            {hasDanger ? 'Allow Dangerous' : 'Allow'}{pendingToolCalls.length > 1 ? ` All (${pendingToolCalls.length})` : ''}
           </button>
           <button className="btn-confirm-always" onClick={onApproveAlways} title="Auto-approve remaining tools this session">
             Always Allow
@@ -422,6 +441,7 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
       case 'save_note': return 'Saving note';
       case 'read_notes': return 'Reading notes';
       case 'delete_note': return 'Deleting note';
+      case 'measure_bandwidth': return 'Measuring bandwidth';
       default: return `Using ${name}`;
     }
   };
@@ -436,6 +456,7 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
       case 'save_note': return 'Saved note';
       case 'read_notes': return 'Read notes';
       case 'delete_note': return 'Deleted note';
+      case 'measure_bandwidth': return 'Measured bandwidth';
       default: return `Used ${name}`;
     }
   };
@@ -665,13 +686,6 @@ export const ChatPane: React.FC<ChatPaneProps> = ({ onInjectCommand, hasApiKey, 
             </div>
           )}
         </div>
-      </div>
-
-      {/* ─── Agent Mode Indicator ─── */}
-      <div className="agent-mode-bar">
-        <span className={`agent-mode-badge agent-mode-${agentMode}`}>
-          {agentMode === 'interactive' ? '🔍 Interactive' : '🤖 Auto'}
-        </span>
       </div>
 
       {/* ─── Error Banner — user-friendly with expandable details ─── */}

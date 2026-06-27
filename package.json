@@ -13,7 +13,7 @@
     "dev:renderer": "webpack --config webpack.config.js --mode development --watch",
     "dev": "concurrently -n main,preload,renderer \"npm run dev:main\" \"npm run dev:preload\" \"npm run dev:renderer\"",
     "dev:start": "concurrently -k -n build,electron \"npm run dev\" \"electron .\"",
-    "start": "electron .",
+    "start": "npm run build && electron .",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",

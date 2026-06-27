@@ -322,6 +322,12 @@ export function registerIpcHandlers(terminalManager: TerminalManager): void {
     return terminalManager.getBuffer(id, lineCount);
   });
 
+  // Terminal reset — send Ctrl+C + cls to recover from stuck state
+  ipcMain.handle('terminal:reset', (_, { id }: { id?: string }) => {
+    const result = terminalManager.resetTerminal(id);
+    return { success: result };
+  });
+
   // Paths that the AI should never read (system files, credentials, etc.)
   const BLOCKED_FILE_PATTERNS = [
     /[\\/]etc[\\/]shadow$/i,
@@ -387,6 +393,77 @@ export function registerIpcHandlers(terminalManager: TerminalManager): void {
       return { success: true, entries, error: '' };
     } catch (err) {
       return { success: false, error: err instanceof Error ? err.message : 'Failed to list directory', entries: [] };
+    }
+  });
+
+  // Safe file write — uses Node.js fs, no shell
+  ipcMain.handle('ai:write-file', (_, { filePath, content }: { filePath: string; content: string }) => {
+    try {
+      const resolved = path.resolve(filePath);
+      // Prevent path traversal
+      for (const pattern of BLOCKED_FILE_PATTERNS) {
+        if (pattern.test(resolved)) {
+          return { success: false, error: 'Access denied: this file is blocked for security' };
+        }
+      }
+      const dir = path.dirname(resolved);
+      if (!fs.existsSync(dir)) {
+        return { success: false, error: 'Parent directory does not exist' };
+      }
+      fs.writeFileSync(resolved, content, 'utf-8');
+      return { success: true, error: '' };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'Failed to write file' };
+    }
+  });
+
+  // Safe file edit (find-and-replace) — uses Node.js fs, no shell
+  ipcMain.handle('ai:edit-file', (_, { filePath, oldText, newText }: { filePath: string; oldText: string; newText: string }) => {
+    try {
+      const resolved = path.resolve(filePath);
+      for (const pattern of BLOCKED_FILE_PATTERNS) {
+        if (pattern.test(resolved)) {
+          return { success: false, error: 'Access denied: this file is blocked for security' };
+        }
+      }
+      if (!fs.existsSync(resolved)) {
+        return { success: false, error: 'File not found' };
+      }
+      const currentContent = fs.readFileSync(resolved, 'utf-8');
+      const idx = currentContent.indexOf(oldText);
+      if (idx === -1) {
+        return { success: false, error: 'Could not find the specified text in the file. The exact string (including whitespace) must match.' };
+      }
+      const newContent = currentContent.slice(0, idx) + newText + currentContent.slice(idx + oldText.length);
+      fs.writeFileSync(resolved, newContent, 'utf-8');
+      const oldLines = oldText.split('\n').length;
+      const newLines = newText.split('\n').length;
+      return { success: true, error: '', linesChanged: `${oldLines} → ${newLines} lines` };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'Failed to edit file' };
+    }
+  });
+
+  // Safe file delete — uses Node.js fs, no shell
+  ipcMain.handle('ai:delete-file', (_, { filePath }: { filePath: string }) => {
+    try {
+      const resolved = path.resolve(filePath);
+      for (const pattern of BLOCKED_FILE_PATTERNS) {
+        if (pattern.test(resolved)) {
+          return { success: false, error: 'Access denied: this file is blocked for security' };
+        }
+      }
+      if (!fs.existsSync(resolved)) {
+        return { success: false, error: 'File not found' };
+      }
+      const stat = fs.statSync(resolved);
+      if (!stat.isFile()) {
+        return { success: false, error: 'Path is not a file' };
+      }
+      fs.unlinkSync(resolved);
+      return { success: true, error: '' };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'Failed to delete file' };
     }
   });
 
