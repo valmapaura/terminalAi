@@ -10,6 +10,24 @@
 
 ---
 
+## ⚠️ Disclaimer — Read Before Using
+
+**OS Assistant is experimental software.** An AI with terminal access is a powerful tool — and it can cause real damage if misused. Please understand the risks before using it.
+
+**The AI is not your property.** OS Assistant is a shell that lets *you* plug in an AI provider (DeepSeek, OpenAI, Anthropic, etc.). The quality, safety, and behavior of the AI depends entirely on the provider and model you choose. I do not control, endorse, or guarantee any AI's output.
+
+**You are responsible for your own safety.** The AI operates in your visible terminal by default — commands run on your actual machine with your permissions. Always watch what it's doing. Do not leave it unattended. Do not give it access to sensitive systems without supervision.
+
+**Things that can go wrong:**
+- The AI may misinterpret your request and run a destructive command (`rm -rf`, `format`, `diskpart`, etc.)
+- The AI may expose personal data it reads from your system
+- The AI may have security vulnerabilities depending on the provider/model
+- The app itself may have bugs — it's a spare-time project
+
+**By using this software, you accept these risks.** If that doesn't sound right for you, that's completely fair — please don't use it.
+
+---
+
 ## Screenshots
 
 |               Main UI               |              AI Chat in Action              |
