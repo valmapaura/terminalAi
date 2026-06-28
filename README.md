@@ -10,6 +10,25 @@
 
 ---
 
+## Screenshots
+
+|               Main UI               |              AI Chat in Action              |
+| :---------------------------------: | :-----------------------------------------: |
+| ![Main UI](screenshots/main-ui.png) |  ![AI Chat](screenshots/chat-response.png)  |
+|  _Split-screen terminal + AI chat_  | _AI assistant responding with tool calling_ |
+
+|               Settings Panel                |              About Dialog              |
+| :-----------------------------------------: | :------------------------------------: |
+| ![Settings](screenshots/settings-panel.png) | ![About](screenshots/about-dialog.png) |
+|     _Multi-provider API configuration_      |          _App info and links_          |
+
+|                          Weather Query                           |
+| :--------------------------------------------------------------: |
+|           ![Weather](screenshots/weather-response.png)           |
+| _AI answering "What's the weather?" — location detection + curl_ |
+
+---
+
 ## Features
 
 | Feature                       | Description                                                                                                                      |
