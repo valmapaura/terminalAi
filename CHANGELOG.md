@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] — 2026-06-29
+
+### Fixed
+
+- Terminal marker pollution — cross-chunk marker fragments no longer leak into visible output
+- Terminal marker text appearing in `getBuffer` results — marker regex now properly strips `__CEND__` lines
+- Duplicate ANSI stripping — consolidated into single `stripAnsi()` helper
+- Compound command echo pollution — commands separated by `\r` instead of `&&` to avoid console echo of full command text
+
+### Changed
+
+- Status bar buttons (About, Split) now inherit theme color instead of always white
+- Settings panel has `min-height: 520px` so it doesn't resize between tabs
+- About dialog merged into Settings panel as a 5th tab instead of standalone overlay
+
 ## [0.2.0] — 2026-06-27
 
 ### Added

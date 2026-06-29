@@ -6,10 +6,19 @@ const MAX_BUFFER_LINES = 1000;
 /** Minimum gap between sequential tool-driven terminal writes (ms) */
 const MIN_TOOL_GAP_MS = 1200;
 
-/** Escape special regex chars in a marker string */
-function escapeMarker(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/**
+ * Strip ANSI/VT escape sequences and control characters from terminal output.
+ */
+function stripAnsi(text: string): string {
+  return text
+    .replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '')
+    .replace(/\u001b\][0-9;]*[a-zA-Z].*?(?:\u001b\\|\u0007)/g, '')
+    .replace(/[\u0000-\u001f]/g, '');
 }
+
+/** Regex matching any line that contains AI execution markers */
+const MARKER_LINE_REGEX = /^.*__CSTART_\w*__?.*$/gm;
+const CEND_MARKER_LINE_REGEX = /^.*__CEND_\w*__?.*$/gm;
 
 export class TerminalManager {
   private terminals: Map<string, pty.IPty> = new Map();
@@ -143,8 +152,11 @@ export class TerminalManager {
     }
 
     const lines = buf.slice(-lineCount).join('\n');
-    // Strip ANSI codes before returning to AI
-    return lines.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '').replace(/\u001b\][0-9;]*[a-zA-Z].*?(?:\u001b\\|\u0007)/g, '').replace(/[\u0000-\u001f]/g, '').trim();
+    // Strip ANSI codes AND AI marker text before returning to AI
+    return stripAnsi(lines)
+      .replace(MARKER_LINE_REGEX, '')
+      .replace(CEND_MARKER_LINE_REGEX, '')
+      .trim();
   }
 
   /** Execute a command on an EXISTING visible terminal and capture output */
@@ -167,14 +179,15 @@ export class TerminalManager {
       let startMarkerFound = false;
 
       // Use unique markers with echo commands so cmd.exe doesn't produce error messages.
-      // Instead of writing raw markers (which cmd.exe tries to execute as commands),
-      // use:  echo __CSTART__ & <command> & echo __CEND__
-      // This produces clean marker text in the output with no error messages.
+      // Instead of &-chaining (which makes cmd.exe echo the entire compound command line),
+      // write marker + command + end marker as SEPARATE lines via \r separators.
+      // This produces clean output: each command is independently echoed and filtered.
       const uid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       const startMarker = `__CSTART_${uid}__`;
       const endMarker = `__CEND_${uid}__`;
-      // Wrap command with echo markers using cmd.exe & chaining — clean, no errors
-      const wrappedCommand = `@echo ${startMarker} & ${command} & @echo ${endMarker}`;
+      // Separate lines: @echo suppresses echo of the marker commands themselves.
+      // Each \r-terminated line is a separate cmd.exe command — no compound echo.
+      const wrappedCommand = `@echo ${startMarker}\r${command}\r@echo ${endMarker}`;
 
       // Shared cleanup: dispose listener + clear timer
       const cleanup = () => {
@@ -203,11 +216,9 @@ export class TerminalManager {
         if (ei !== -1) {
           let captured = output.slice(0, ei);
           // Strip ANSI escape codes immediately so IPC payload is smaller
-          captured = captured.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '').replace(/\u001b\][0-9;]*[a-zA-Z].*?(?:\u001b\\|\u0007)/g, '').replace(/[\u0000-\u001f]/g, '').trim();
+          captured = stripAnsi(captured).trim();
           // Remove prompt suffix artifacts (e.g., "C:\Users\valma>" at end)
           captured = captured.replace(/[A-Z]:\\(?:[^\\>]+\\)*[^\\>]*>\s*$/, '').trim();
-          // Also clean up any echoed command line containing the markers (cmd.exe echo-on edge case)
-          captured = captured.replace(new RegExp(`@?echo\\s+${escapeMarker(startMarker)}\\s*&?\\s*`, 'gi'), '').trim();
           // Cache this output for readBuffer fallback
           this.lastCapturedOutput.set(id, captured);
           this.lastWriteTime.set(id, Date.now());
@@ -219,7 +230,7 @@ export class TerminalManager {
       // Use onData (node-pty's typed method) instead of on('data')
       const disp = term.onData(dataHandler);
 
-      // Send wrapped command — no raw markers, no cmd.exe errors
+      // Send wrapped command — three separate commands, clean output
       term.write(wrappedCommand + '\r');
 
       // Safety timeout
@@ -229,7 +240,7 @@ export class TerminalManager {
           // Return whatever we captured (may be partial)
           let captured = startMarkerFound ? output : '(no output captured before timeout)';
           if (startMarkerFound) {
-            captured = captured.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '').replace(/\u001b\][0-9;]*[a-zA-Z].*?(?:\u001b\\|\u0007)/g, '').replace(/[\u0000-\u001f]/g, '').trim();
+            captured = stripAnsi(captured).trim();
           }
           this.lastWriteTime.set(id, Date.now());
           resolve({ output: captured });
@@ -263,13 +274,13 @@ export class TerminalManager {
         if (output.length > 100_000) {
           clearTimeout(timeout);
           term.kill();
-          resolve(output + '\n...(output truncated at 100KB)');
+          resolve(stripAnsi(output) + '\n...(output truncated at 100KB)');
         }
       });
 
       term.onExit(() => {
         clearTimeout(timeout);
-        resolve(output);
+        resolve(stripAnsi(output));
       });
     });
   }

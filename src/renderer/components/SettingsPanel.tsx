@@ -9,9 +9,71 @@ interface SettingsPanelProps {
   onClose: () => void;
   onClearChat?: () => void;
   onAgentModeChange?: (mode: 'auto' | 'interactive') => void;
+  version?: string;
+  initialTab?: 'api' | 'appearance' | 'debug' | 'agent' | 'about';
 }
 
-export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate, onClose, onClearChat, onAgentModeChange }) => {
+function ProviderIcon({ id }: { id: string }) {
+  const s = 20;
+  switch (id) {
+    case 'deepseek':
+      return (
+        <svg width={s} height={s} viewBox="0 0 20 20">
+          <rect width="20" height="20" rx="4" fill="#4D6BFE"/>
+          <path d="M5 15c0-4 2-7 6-9" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+          <path d="M5 15h10" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      );
+    case 'openai':
+      return (
+        <svg width={s} height={s} viewBox="0 0 20 20">
+          <rect width="20" height="20" rx="4" fill="#10A37F"/>
+          <circle cx="10" cy="10" r="2" fill="#fff"/>
+          <circle cx="6.5" cy="7" r="2.3" fill="#fff" opacity="0.5"/>
+          <circle cx="13.5" cy="7" r="2.3" fill="#fff" opacity="0.5"/>
+          <circle cx="10" cy="14.5" r="2.3" fill="#fff" opacity="0.5"/>
+        </svg>
+      );
+    case 'azure':
+      return (
+        <svg width={s} height={s} viewBox="0 0 20 20">
+          <rect width="20" height="20" rx="4" fill="#0078D4"/>
+          <path d="M5 15l4-10h2l4 10h-2l-3-8-3 8H5z" fill="#fff"/>
+        </svg>
+      );
+    case 'anthropic':
+      return (
+        <svg width={s} height={s} viewBox="0 0 20 20">
+          <rect width="20" height="20" rx="4" fill="#CC8B65"/>
+          <rect x="5" y="6" width="10" height="2" rx="1" fill="#fff"/>
+          <rect x="5" y="10" width="7" height="2" rx="1" fill="#fff"/>
+          <rect x="5" y="14" width="4" height="2" rx="1" fill="#fff"/>
+        </svg>
+      );
+    case 'google':
+      return (
+        <svg width={s} height={s} viewBox="0 0 20 20">
+          <rect x="0" y="0" width="10" height="10" fill="#4285F4"/>
+          <rect x="10" y="0" width="10" height="10" fill="#EA4335"/>
+          <rect x="0" y="10" width="10" height="10" fill="#FBBC05"/>
+          <rect x="10" y="10" width="10" height="10" fill="#34A853"/>
+          <circle cx="10" cy="10" r="5" fill="#fff"/>
+        </svg>
+      );
+    case 'custom':
+      return (
+        <svg width={s} height={s} viewBox="0 0 20 20">
+          <rect width="20" height="20" rx="4" fill="#888"/>
+          <circle cx="10" cy="10" r="4" stroke="#fff" strokeWidth="1.5" fill="none"/>
+          <path d="M10 7v6M7 10h6" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      );
+    default:
+      return <span>?</span>;
+  }
+}
+
+export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate, onClose, onClearChat, onAgentModeChange, version, initialTab }) => {
   const [activeProvider, setActiveProvider] = useState<AIProviderType>(settings.activeProvider || 'deepseek');
   const [providerConfigs, setProviderConfigs] = useState<Record<string, ProviderConfig>>({});
   const [localKey, setLocalKey] = useState('');
@@ -19,7 +81,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
   const [localModel, setLocalModel] = useState('');
   const [localLabel, setLocalLabel] = useState('');
   const [isCustomModel, setIsCustomModel] = useState(false);
-  const [activeTab, setActiveTab] = useState<'api' | 'appearance' | 'debug' | 'agent'>('api');
+  const [activeTab, setActiveTab] = useState<'api' | 'appearance' | 'debug' | 'agent' | 'about'>(initialTab || 'api');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<'idle' | 'success' | 'fail'>('idle');
@@ -391,6 +453,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
           >
             🛡️ Agent
           </button>
+          <button
+            className={`settings-tab ${activeTab === 'about' ? 'active' : ''}`}
+            onClick={() => setActiveTab('about')}
+          >
+            ℹ️ About
+          </button>
         </div>
 
         <div className="settings-body">
@@ -411,12 +479,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
                       title={provider.name}
                     >
                       <span className="provider-icon">
-                        {provider.id === 'deepseek' ? '🌀' :
-                         provider.id === 'openai' ? '○' :
-                         provider.id === 'azure' ? '☁' :
-                         provider.id === 'anthropic' ? '●' :
-                         provider.id === 'google' ? '◈' :
-                         provider.id === 'custom' ? '🔌' : '?'}
+                        <ProviderIcon id={provider.id} />
                       </span>
                       <span className="provider-name">{provider.name}</span>
                     </button>
@@ -869,6 +932,74 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate
                     <li>Use <strong>Always Allow</strong> to temporarily trust commands during a session.</li>
                     <li>Switch modes anytime from this panel or the <strong>status bar</strong> indicator.</li>
                   </ul>
+                </div>
+              </div>
+            </>
+          )}
+          {activeTab === 'about' && (
+            <>
+              <div className="settings-section about-section">
+                <div className="about-hero">
+                  <div className="about-icon-large">◆</div>
+                  <h2>OS Assistant</h2>
+                  <div className="about-version-badge">v{version || '0.1.0'}</div>
+                </div>
+
+                <p className="about-description">
+                  Your AI copilot for the operating system. Execute commands, manage files, and automate tasks through natural language.
+                </p>
+
+                <div className="about-details-card">
+                  <div className="about-detail-row">
+                    <span className="about-detail-label">Platform</span>
+                    <span className="about-detail-value">{navigator.platform}</span>
+                  </div>
+                  <div className="about-detail-row">
+                    <span className="about-detail-label">Electron</span>
+                    <span className="about-detail-value">{/* Injected at build time */}</span>
+                  </div>
+                  <div className="about-detail-row">
+                    <span className="about-detail-label">License</span>
+                    <span className="about-detail-value">MIT</span>
+                  </div>
+                </div>
+
+                <div className="about-links-grid">
+                  <a className="about-link" href="https://github.com/valmapaura/terminalAi" title="GitHub Repository">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+                    </svg>
+                    GitHub
+                  </a>
+                  <a className="about-link" href="https://github.com/valmapaura/terminalAi/blob/main/LICENSE" title="MIT License">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M2 1.5A1.5 1.5 0 013.5 0h5.586a1.5 1.5 0 011.06.44l3.415 3.414A1.5 1.5 0 0114 4.914V14.5a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 14.5V1.5zM3.5 1a.5.5 0 00-.5.5v13a.5.5 0 00.5.5h9a.5.5 0 00.5-.5V4.914a.5.5 0 00-.146-.353l-3.415-3.415A.5.5 0 009.086 1H3.5z" />
+                      <path d="M4 5.5a.5.5 0 01.5-.5h4a.5.5 0 010 1h-4a.5.5 0 01-.5-.5zM4 8a.5.5 0 01.5-.5h4a.5.5 0 010 1h-4a.5.5 0 01-.5-.5zM4 10.5a.5.5 0 01.5-.5h3a.5.5 0 010 1h-3a.5.5 0 01-.5-.5z" />
+                    </svg>
+                    License
+                  </a>
+                  <a className="about-link" href="https://github.com/valmapaura/terminalAi/releases/latest" title="Latest Release">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M1 7.775A2.5 2.5 0 013.5 5.5h.75a.75.75 0 010 1.5H3.5a1 1 0 000 2h.75a.75.75 0 010 1.5H3.5A2.5 2.5 0 011 7.775zM11.5 5.5h2.5a.75.75 0 010 1.5H13v2.5a.75.75 0 01-1.5 0V7h-1a.75.75 0 010-1.5h1z" />
+                      <path d="M8 12a4 4 0 110-8 4 4 0 010 8zm0-1.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />
+                    </svg>
+                    Latest Release
+                  </a>
+                  <a className="about-link" href="https://github.com/valmapaura/terminalAi/blob/main/ARCHITECTURE.md" title="Architecture Docs">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M2 1.5A1.5 1.5 0 013.5 0h5.586a1.5 1.5 0 011.06.44l3.415 3.414A1.5 1.5 0 0114 4.914V14.5a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 14.5V1.5zM3.5 1a.5.5 0 00-.5.5v13a.5.5 0 00.5.5h9a.5.5 0 00.5-.5V4.914a.5.5 0 00-.146-.353l-3.415-3.415A.5.5 0 009.086 1H3.5z" />
+                    </svg>
+                    Architecture
+                  </a>
+                </div>
+
+                <div className="about-footer-text">
+                  <span>Made with ❤️ for developers</span>
+                  <span className="about-footer-links">
+                    <a href="https://github.com/valmapaura/terminalAi/blob/main/README.md">README</a>
+                    <span className="about-footer-sep">·</span>
+                    <a href="https://github.com/valmapaura/terminalAi/issues">Issues</a>
+                  </span>
                 </div>
               </div>
             </>

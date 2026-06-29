@@ -110,12 +110,14 @@ test.describe('OS Assistant — Screenshots', () => {
     ensureDir(SCREENSHOT_DIR);
     const { app, page } = await launchApp();
 
-    // ── Screenshot 4: About dialog ──
+    // ── Screenshot 4: About tab inside Settings ──
     const aboutBtn = page.locator('.status-bar-right button', { hasText: 'About' });
     await aboutBtn.waitFor({ state: 'visible', timeout: 5000 });
     await aboutBtn.click();
     await page.waitForTimeout(800);
-    await page.locator('.about-dialog').waitFor({ state: 'visible', timeout: 5000 });
+    // About is now a tab inside the Settings panel
+    await page.locator('.settings-panel').waitFor({ state: 'visible', timeout: 5000 });
+    await page.locator('.settings-tab.active', { hasText: 'About' }).waitFor({ state: 'visible', timeout: 5000 });
     await page.waitForTimeout(500);
 
     await page.screenshot({

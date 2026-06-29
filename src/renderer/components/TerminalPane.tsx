@@ -159,8 +159,20 @@ export const TerminalPane: React.FC<TerminalPaneProps> = ({ terminalId, theme })
       }
     };
 
+    // Track first-fit so we can clear the cmd.exe welcome banner
+    const firstFitRef = { current: true };
+
     requestAnimationFrame(() => {
       sendResize();
+      // Clear the cmd.exe welcome banner after the initial resize so
+      // the terminal starts at the correct dimensions with just a prompt.
+      if (firstFitRef.current) {
+        firstFitRef.current = false;
+        const id = terminalIdRef.current;
+        if (id) {
+          window.terminalAPI.write(id, 'cls\r');
+        }
+      }
       setReady(true);
     });
 
@@ -179,17 +191,83 @@ export const TerminalPane: React.FC<TerminalPaneProps> = ({ terminalId, theme })
     });
 
     // Receive data from main process
+    // Line buffer to handle marker text split across node-pty data chunks.
+    // Processes complete lines (ending with \n) individually, filtering out
+    // any lines containing AI execution markers. Also detects and discards
+    // partial marker fragments (uid tails like "x3z7__") in the incomplete buffer.
+    //
+    // Delayed flush: cmd.exe output after "cls" (or any command where the
+    // prompt is the final output) does NOT end with \n.  Without a timeout
+    // the prompt stays stuck in the buffer and the terminal appears blank.
+    // A 150 ms timer flushes orphaned tail data so the prompt always renders.
+    const lineBufferRef = { current: '' };
+    const flushTimerRef: { current: ReturnType<typeof setTimeout> | null } = { current: null };
+
+    const flushRemainder = () => {
+      const remainder = lineBufferRef.current;
+      if (!remainder) return;
+      lineBufferRef.current = '';
+      // Still filter out any marker-like fragments before writing
+      if (!/__C(?:START|END)__/.test(remainder)) {
+        term.write(remainder);
+      }
+    };
+
+    const scheduleFlush = () => {
+      if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
+      flushTimerRef.current = setTimeout(() => {
+        flushTimerRef.current = null;
+        flushRemainder();
+      }, 150);
+    };
+
     const dataHandler = ({ id, data }: { id: string; data: string }) => {
-      if (id === terminalIdRef.current) {
-        // Filter out AI execution markers so they don't clutter the visible terminal.
-        // executeOnTerminal wraps commands with @echo __CSTART_{uid}__ / __CEND_{uid}__
-        // markers. These are needed for output capture but should be invisible to the user.
-        const cleaned = data
-          .split('\n')
-          .filter((line) => !line.includes('__CSTART_') && !line.includes('__CEND_'))
-          .join('\n');
-        // If the cleaned data still has content (e.g. partial lines), write it
-        if (cleaned) term.write(cleaned);
+      if (id !== terminalIdRef.current) return;
+
+      // Append new data to the line buffer
+      const lb = lineBufferRef.current + data;
+
+      // Find the last complete line (boundary at \n)
+      const nlIdx = lb.lastIndexOf('\n');
+      if (nlIdx === -1) {
+        // No complete line yet — check if this partial data looks like
+        // a marker fragment (e.g., uid tail) and discard it to prevent
+        // garbage text appearing in the visible terminal.
+        if (/__C\w*$/.test(lb) || /^\w{3,8}__\r?$/.test(lb)) {
+          lineBufferRef.current = '';
+        } else {
+          lineBufferRef.current = lb;
+          scheduleFlush();
+        }
+        return;
+      }
+
+      // Has complete line(s) — cancel any pending delayed flush
+      if (flushTimerRef.current) {
+        clearTimeout(flushTimerRef.current);
+        flushTimerRef.current = null;
+      }
+
+      // Extract complete lines (including the terminal \n)
+      const completePortion = lb.slice(0, nlIdx + 1);
+      lineBufferRef.current = lb.slice(nlIdx + 1);
+
+      // Filter out any line containing AI execution markers
+      const cleaned = completePortion
+        .split('\n')
+        .filter((line) => !line.includes('__CSTART_') && !line.includes('__CEND_'))
+        .join('\n');
+
+      if (cleaned) term.write(cleaned);
+
+      // Check remaining buffer for partial marker fragments
+      if (lineBufferRef.current.length > 0) {
+        if (/__C\w*$/.test(lineBufferRef.current) || /^\w{3,8}__\r?$/.test(lineBufferRef.current)) {
+          lineBufferRef.current = '';
+        } else {
+          // Schedule delayed flush — prompt text after cls won't have \n
+          scheduleFlush();
+        }
       }
     };
     window.terminalAPI.onData(dataHandler);
@@ -207,6 +285,10 @@ export const TerminalPane: React.FC<TerminalPaneProps> = ({ terminalId, theme })
     xtermRef.current = term;
 
     return () => {
+      if (flushTimerRef.current) {
+        clearTimeout(flushTimerRef.current);
+        flushTimerRef.current = null;
+      }
       observer.disconnect();
       window.terminalAPI.removeDataListener();
       container.removeEventListener('click', focusTerm);
