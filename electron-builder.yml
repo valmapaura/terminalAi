@@ -1,5 +1,6 @@
 appId: com.os-assistant.app
 productName: OS Assistant
+npmRebuild: false
 directories:
   output: release
   buildResources: assets
