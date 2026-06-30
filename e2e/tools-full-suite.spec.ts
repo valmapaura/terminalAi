@@ -33,7 +33,11 @@ function cleanupTestOutput(): void {
   fs.mkdirSync(TEST_OUTPUT_DIR, { recursive: true });
 }
 
+const hasApiKey = !!process.env.TEST_DEEPSEEK_API_KEY;
+
 test.describe('OS Assistant — Full Tool Suite', () => {
+  test.skip(!hasApiKey, 'TEST_DEEPSEEK_API_KEY is not set — skipping full tool suite');
+
   // Use longer timeout — we're testing 18 things
   test.setTimeout(180_000);
 

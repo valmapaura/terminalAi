@@ -2,14 +2,10 @@ import { test, expect } from '@playwright/test';
 import { launchApp, setApiKey, sendMessage, waitForAssistantSuccess } from './helpers';
 
 const DEEPSEEK_API_KEY = process.env.TEST_DEEPSEEK_API_KEY;
-if (!DEEPSEEK_API_KEY) {
-  throw new Error(
-    'TEST_DEEPSEEK_API_KEY environment variable is required. ' +
-    'Set it to your DeepSeek API key before running system tool tests.'
-  );
-}
+const hasApiKey = !!DEEPSEEK_API_KEY;
 
 test.describe('OS Assistant — System Tools (scan_wifi, monitor_hardware, process_tree)', () => {
+  test.skip(!hasApiKey, 'TEST_DEEPSEEK_API_KEY is not set — skipping system tool tests');
 
   // ─── Wi-Fi Scanner (Direct IPC) ───
   test('scan_wifi IPC handler returns a valid response structure', async () => {

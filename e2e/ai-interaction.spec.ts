@@ -3,14 +3,10 @@ import { launchApp, sendMessage, setApiKey, waitForAssistantSuccess } from './he
 
 // The test API key for DeepSeek — MUST be set via environment variable.
 const DEEPSEEK_API_KEY = process.env.TEST_DEEPSEEK_API_KEY;
-if (!DEEPSEEK_API_KEY) {
-  throw new Error(
-    'TEST_DEEPSEEK_API_KEY environment variable is required. ' +
-    'Set it to your DeepSeek API key before running AI interaction tests.'
-  );
-}
+const hasApiKey = !!DEEPSEEK_API_KEY;
 
 test.describe('OS Assistant — AI interaction', () => {
+  test.skip(!hasApiKey, 'TEST_DEEPSEEK_API_KEY is not set — skipping AI interaction tests');
   test('executes a command when asked explicitly', async () => {
     test.setTimeout(60_000);
 
