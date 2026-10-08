@@ -2,6 +2,7 @@
   "name": "os-assistant",
   "version": "0.2.1",
   "description": "Your AI copilot for the operating system — open-source split-screen terminal + AI assistant powered by DeepSeek.",
+  "author": "Valentine Mapaura",
   "main": "dist/main/main.js",
   "scripts": {
     "build:main": "tsc -p tsconfig.main.json",
