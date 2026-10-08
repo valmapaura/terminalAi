@@ -757,6 +757,14 @@ function toOpenAIMessages(messages: ChatMessage[]): Record<string, unknown>[] {
         function: { name: tc.function.name, arguments: tc.function.arguments },
       }));
     }
+    // Thinking-mode models (DeepSeek reasoning, custom reasoning endpoints) require the
+    // original reasoning to be sent back with the assistant turn. Dropping it makes the
+    // API reject the next request with "reasoning_content ... must be passed back".
+    // Only ever set when the provider gave us reasoning in the first place, so providers
+    // that don't emit reasoning_content are unaffected.
+    if (m.role === 'assistant' && m.reasoning) {
+      base.reasoning_content = m.reasoning;
+    }
     return base;
   });
 }
